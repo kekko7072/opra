@@ -90,10 +90,27 @@ jobs:
     
     - name: Code Sign Application
       run: |
+        # Set keychain to use
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        
+        echo "Listing available identities..."
+        security find-identity -v -p codesigning $KEYCHAIN_PATH
+        
         echo "Signing application..."
-        codesign --force --deep --sign "Developer ID Application" \
+        # Find the Developer ID Application identity
+        IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -1 | grep -o '".*"' | tr -d '"')
+        
+        if [ -z "$IDENTITY" ]; then
+          echo "Error: No Developer ID Application certificate found"
+          exit 1
+        fi
+        
+        echo "Using identity: $IDENTITY"
+        
+        codesign --force --deep --sign "$IDENTITY" \
           --options runtime \
           --timestamp \
+          --keychain $KEYCHAIN_PATH \
           ./build/Build/Products/Release/Opra.app
         
         echo "Verifying signature..."
