@@ -224,8 +224,8 @@ import Speech
                 // Start progress tracking on a user-initiated queue
                 self.startProgressTracking()
                 
-                // Start timeout timer to detect stuck TTS
-                self.startTimeoutTimer()
+                // Timeout timer disabled to prevent false positives
+                // self.startTimeoutTimer()
             }
         }
     }
@@ -373,20 +373,16 @@ import Speech
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
             
-            // If not speaking, stop the timer
-            if !self.isSpeaking {
-                self.elapsedTimeTimer?.cancel()
-                self.elapsedTimeTimer = nil
-                return
-            }
-            
-            // Calculate elapsed time
+            // Calculate elapsed time if we have a start date
             if let startDate = self.utteranceStartDate {
                 let elapsed = Date().timeIntervalSince(startDate)
                 let actualElapsed = elapsed - self.totalPausedTime
                 
                 Task { @MainActor in
-                    self.elapsedTime = actualElapsed
+                    // Only update if we're still speaking and have a valid start date
+                    if self.isSpeaking && self.utteranceStartDate != nil {
+                        self.elapsedTime = actualElapsed
+                    }
                 }
             }
         }
@@ -399,38 +395,10 @@ import Speech
         timeoutTimer?.cancel()
         timeoutTimer = nil
         
-        // Create a timeout timer - if TTS doesn't finish in 30 seconds, assume it's stuck
-        let queue = DispatchQueue(label: "tts.timeout.timer", qos: .userInitiated)
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 30.0) // 30 second timeout
-        timer.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            
-            // Check if we're still speaking and haven't made progress
-            if self.isSpeaking && self.readingProgress < 0.1 {
-                print("TTS Timeout detected - TTS appears to be stuck, forcing completion")
-                
-                Task { @MainActor in
-                    // Force completion of current chunk
-                    if let handler = self.chunkCompletionHandler {
-                        self.chunkCompletionHandler = nil
-                        handler()
-                    }
-                    
-                    // Reset state
-                    self.isSpeaking = false
-                    self.isPaused = false
-                    self.currentUtterance = nil
-                    self.progressTimer?.cancel()
-                    self.progressTimer = nil
-                    self.timeoutTimer?.cancel()
-                    self.timeoutTimer = nil
-                    self.utteranceStartDate = nil
-                }
-            }
-        }
-        timeoutTimer = timer
-        timer.resume()
+        // Disable timeout timer for now - it was causing false positives
+        // The TTS system should handle completion naturally through delegate methods
+        // If needed, we can re-enable with much more conservative settings
+        print("TTS Debug - Timeout timer disabled to prevent false positives")
     }
     
     func pauseSpeaking() {
@@ -455,8 +423,7 @@ import Speech
         // Cancel all timers first
         progressTimer?.cancel()
         progressTimer = nil
-        elapsedTimeTimer?.cancel()
-        elapsedTimeTimer = nil
+        stopElapsedTimeTracking()
         timeoutTimer?.cancel()
         timeoutTimer = nil
         
@@ -473,6 +440,11 @@ import Speech
         isPaused = false
         
         print("TTS Debug - Speech stopped, state reset")
+    }
+    
+    private func stopElapsedTimeTracking() {
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
     }
     
     func setSpeechRate(_ rate: Float) {
@@ -857,8 +829,7 @@ import Speech
         self.currentUtterance = nil
         self.progressTimer?.cancel()
         self.progressTimer = nil
-        self.elapsedTimeTimer?.cancel()
-        self.elapsedTimeTimer = nil
+        self.stopElapsedTimeTracking()
         self.timeoutTimer?.cancel()
         self.timeoutTimer = nil
         self.utteranceStartDate = nil

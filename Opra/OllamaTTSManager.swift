@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 @MainActor
-class OllamaTTSManager: NSObject, ObservableObject {
+class OllamaTTSManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isAvailable: Bool = false
     @Published var isProcessing: Bool = false
     @Published var availableModels: [String] = []
@@ -260,19 +260,15 @@ class OllamaTTSManager: NSObject, ObservableObject {
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
             
-            // If not speaking, stop the timer
-            if !self.isSpeaking {
-                self.elapsedTimeTimer?.cancel()
-                self.elapsedTimeTimer = nil
-                return
-            }
-            
-            // Calculate elapsed time
+            // Calculate elapsed time if we have a start date
             if let startDate = self.playbackStartDate {
                 let elapsed = Date().timeIntervalSince(startDate)
                 
                 Task { @MainActor in
-                    self.elapsedTime = elapsed
+                    // Only update if we're still speaking and have a valid start date
+                    if self.isSpeaking && self.playbackStartDate != nil {
+                        self.elapsedTime = elapsed
+                    }
                 }
             }
         }
@@ -301,6 +297,10 @@ class OllamaTTSManager: NSObject, ObservableObject {
         playbackStartDate = nil
         
         // Cancel elapsed time timer
+        stopElapsedTimeTracking()
+    }
+    
+    private func stopElapsedTimeTracking() {
         elapsedTimeTimer?.cancel()
         elapsedTimeTimer = nil
     }
@@ -467,13 +467,19 @@ class OllamaTTSManager: NSObject, ObservableObject {
     }
 }
 
-extension OllamaTTSManager: AVAudioPlayerDelegate {
+// MARK: - AVAudioPlayerDelegate
+extension OllamaTTSManager {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
             isSpeaking = false
             isPaused = false
             readingProgress = 0.0
             currentWordIndex = 0
+            elapsedTime = 0.0
+            playbackStartDate = nil
+            
+            // Cancel elapsed time timer
+            stopElapsedTimeTracking()
         }
     }
     
@@ -482,6 +488,11 @@ extension OllamaTTSManager: AVAudioPlayerDelegate {
             errorMessage = "Audio playback error: \(error?.localizedDescription ?? "Unknown error")"
             isSpeaking = false
             isPaused = false
+            elapsedTime = 0.0
+            playbackStartDate = nil
+            
+            // Cancel elapsed time timer
+            stopElapsedTimeTracking()
         }
     }
 }
