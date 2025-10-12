@@ -2,9 +2,7 @@
 
 ![App Icon](./app-icon.png)
 
-## Demo
-
-https://github.com/user-attachments/assets/app-recording.mp4
+<video src="./app-recording.mp4" controls></video>
 
 A simple macOS app that reads PDF documents aloud using AI-powered text-to-speech technology.
 

@@ -334,6 +334,45 @@ struct ContentView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
+                    // Credits note
+                    VStack(spacing: 8) {
+                        Divider()
+                            .frame(width: 200)
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "heart.fill")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                            
+                            Text("Developed by")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Francesco Vezzani")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Button("View on GitHub") {
+                                if let url = URL(string: "https://github.com/kekko7072/Opra") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            .font(.caption)
+                            .buttonStyle(.plain)
+                            .foregroundColor(.blue)
+                        }
+                        
+                        Text("Open source • Contributions welcome")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 20)
+                    
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
