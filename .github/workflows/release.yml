@@ -57,13 +57,46 @@ jobs:
         fi
         echo "Build successful!"
     
-    - name: Ad-hoc code sign
+    - name: Import Code Signing Certificate
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       run: |
-        echo "Applying ad-hoc code signature..."
-        codesign --force --deep --sign - ./build/Build/Products/Release/Opra.app
+        # Create temporary keychain
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+        
+        # Create keychain
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        
+        # Import certificate
+        echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+        security import certificate.p12 -k $KEYCHAIN_PATH -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        
+        # Add keychain to search list
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        
+        # Clean up certificate file
+        rm certificate.p12
+        
+        echo "Certificate imported successfully"
+    
+    - name: Code Sign Application
+      run: |
+        echo "Signing application..."
+        codesign --force --deep --sign "Developer ID Application" \
+          --options runtime \
+          --timestamp \
+          ./build/Build/Products/Release/Opra.app
+        
         echo "Verifying signature..."
         codesign --verify --verbose ./build/Build/Products/Release/Opra.app
-        echo "Ad-hoc signature applied successfully"
+        codesign -dv --verbose=4 ./build/Build/Products/Release/Opra.app
+        
+        echo "Code signing completed successfully"
     
     - name: Create DMG
       run: |
@@ -88,10 +121,60 @@ jobs:
         echo "DMG created successfully"
         ls -lh Opra-${{ steps.version.outputs.version }}.dmg
     
-    - name: Create ZIP of app
+    - name: Notarize DMG
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
+        echo "Submitting DMG for notarization..."
+        
+        # Submit for notarization
+        xcrun notarytool submit Opra-${{ steps.version.outputs.version }}.dmg \
+          --apple-id "$APPLE_ID" \
+          --password "$APPLE_ID_PASSWORD" \
+          --team-id "$APPLE_TEAM_ID" \
+          --wait
+        
+        echo "Notarization completed"
+    
+    - name: Staple DMG
+      run: |
+        echo "Stapling notarization ticket to DMG..."
+        xcrun stapler staple Opra-${{ steps.version.outputs.version }}.dmg
+        
+        echo "Verifying staple..."
+        xcrun stapler validate Opra-${{ steps.version.outputs.version }}.dmg
+        
+        echo "DMG stapled successfully"
+    
+    - name: Notarize and Create ZIP of app
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        echo "Creating ZIP for notarization..."
         cd ./build/Build/Products/Release/
+        zip -r temp-app.zip Opra.app
+        
+        echo "Submitting app ZIP for notarization..."
+        xcrun notarytool submit temp-app.zip \
+          --apple-id "$APPLE_ID" \
+          --password "$APPLE_ID_PASSWORD" \
+          --team-id "$APPLE_TEAM_ID" \
+          --wait
+        
+        echo "Stapling notarization ticket to app..."
+        xcrun stapler staple Opra.app
+        
+        echo "Verifying staple..."
+        xcrun stapler validate Opra.app
+        
+        echo "Creating final ZIP..."
+        rm temp-app.zip
         zip -r $GITHUB_WORKSPACE/Opra-${{ steps.version.outputs.version }}.app.zip Opra.app
+        
         cd $GITHUB_WORKSPACE
         echo "ZIP created successfully"
         ls -lh Opra-${{ steps.version.outputs.version }}.app.zip
@@ -125,30 +208,23 @@ jobs:
         3. Move Opra.app to your Applications folder
         4. Launch Opra from your Applications folder
         
-        ### ⚠️ Security Note
+        ### ✅ Security & Notarization
         
-        This app uses ad-hoc code signing (not notarized by Apple). On first launch:
+        This app is **properly code-signed and notarized by Apple** using a Developer ID certificate. 
         
-        **If you get a warning that the app cannot be opened:**
+        You should be able to open it directly without any security warnings. The app has been verified by Apple's notarization service and is safe to run.
+        
+        If you encounter any security warnings (rare), you can:
         1. **Right-click** (or Control-click) on Opra.app and select **"Open"**
-        2. Click **"Open"** again in the dialog that appears
-        3. The app will now run and remember your choice
-        
-        **Alternative method:**
-        1. Open **System Settings** > **Privacy & Security**
-        2. Scroll down to find the blocked app message
-        3. Click **"Open Anyway"**
-        
-        **Or remove quarantine attribute via Terminal:**
-        ```bash
-        xattr -cr /Applications/Opra.app
-        ```
+        2. Click **"Open"** in the dialog that appears
         
         ### 📋 Build Information
         
         - **Version**: ${{ steps.version.outputs.version }}
         - **Build**: ${{ steps.version.outputs.build }}
         - **Commit**: ${{ github.sha }}
+        - **Code Signing**: Developer ID Application
+        - **Notarization**: Apple Notary Service
         - **Built with**: Xcode on macOS (latest stable)
         EOF
         
@@ -168,3 +244,12 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
         artifactErrorsFailBuild: true
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        # Delete the temporary keychain
+        if [ -f "$RUNNER_TEMP/app-signing.keychain-db" ]; then
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          echo "Temporary keychain deleted"
+        fi

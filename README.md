@@ -47,28 +47,9 @@ PDF → Extract Text → AI Speech → Audio Playback
 4. Drag the Opra app icon to your Applications folder
 5. Launch Opra from your Applications folder
 
-#### ⚠️ Important: First Launch Instructions
+#### ✅ Notarized & Code Signed
 
-Since this app is not notarized by Apple, macOS will block it on first launch. Here's how to open it:
-
-**Method 1 - Right-click (Easiest):**
-1. **Right-click** (or Control-click) on **Opra.app** in your Applications folder
-2. Select **"Open"** from the menu
-3. Click **"Open"** in the confirmation dialog
-4. The app will now run normally
-
-**Method 2 - System Settings:**
-1. Try to open the app normally (you'll see the warning)
-2. Go to **System Settings** > **Privacy & Security**
-3. Scroll down to see the message about Opra
-4. Click **"Open Anyway"**
-
-**Method 3 - Terminal (Advanced):**
-```bash
-xattr -cr /Applications/Opra.app
-```
-
-You only need to do this once. After the first launch, the app will open normally.
+The app is **properly code-signed and notarized by Apple**, so it should open directly without any security warnings. macOS will recognize it as a trusted application from an identified developer.
 
 ### Option 2: Build from Source
 
@@ -79,3 +60,5 @@ You only need to do this once. After the first launch, the app will open normall
    ```
 2. Open `Opra.xcodeproj` in Xcode
 3. Build and run the project (⌘R)
+
+
