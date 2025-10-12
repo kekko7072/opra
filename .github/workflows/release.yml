@@ -57,6 +57,14 @@ jobs:
         fi
         echo "Build successful!"
     
+    - name: Ad-hoc code sign
+      run: |
+        echo "Applying ad-hoc code signature..."
+        codesign --force --deep --sign - ./build/Build/Products/Release/Opra.app
+        echo "Verifying signature..."
+        codesign --verify --verbose ./build/Build/Products/Release/Opra.app
+        echo "Ad-hoc signature applied successfully"
+    
     - name: Create DMG
       run: |
         # Create a temporary directory for the DMG
@@ -119,9 +127,22 @@ jobs:
         
         ### ⚠️ Security Note
         
-        This app is not code-signed. You may need to:
-        1. Right-click (or Control-click) the app and select "Open"
-        2. Or go to System Preferences > Security & Privacy to allow the app to run
+        This app uses ad-hoc code signing (not notarized by Apple). On first launch:
+        
+        **If you get a warning that the app cannot be opened:**
+        1. **Right-click** (or Control-click) on Opra.app and select **"Open"**
+        2. Click **"Open"** again in the dialog that appears
+        3. The app will now run and remember your choice
+        
+        **Alternative method:**
+        1. Open **System Settings** > **Privacy & Security**
+        2. Scroll down to find the blocked app message
+        3. Click **"Open Anyway"**
+        
+        **Or remove quarantine attribute via Terminal:**
+        ```bash
+        xattr -cr /Applications/Opra.app
+        ```
         
         ### 📋 Build Information
         
