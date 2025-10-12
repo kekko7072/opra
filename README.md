@@ -1,6 +1,6 @@
 # Opra - Open PDF Reader AI
 
-![App Icon](app-icon.png)
+![App Icon](./app-icon.png)
 
 A simple macOS app that reads PDF documents aloud using AI-powered text-to-speech technology.
 
