@@ -99,9 +99,9 @@
 			);
 			dependencies = (
 			);
-			name = PDFReader;
-			productName = PDFReader;
-			productReference = A1234567890ABCDEF1234563 /* PDFReader.app */;
+			name = Opra;
+			productName = Opra;
+			productReference = A1234567890ABCDEF1234563 /* Opra.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
