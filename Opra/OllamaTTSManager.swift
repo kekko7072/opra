@@ -75,51 +75,14 @@ class OllamaTTSManager: NSObject, ObservableObject {
     }
     
     private func selectBestTTSModel() {
-        // Filter for actual TTS models first
-        let ttsModels = availableModels.filter { model in
-            model.lowercased().contains("tts") || 
-            model.lowercased().contains("bark") || 
-            model.lowercased().contains("tortoise") ||
-            model.lowercased().contains("coqui") ||
-            model.lowercased().contains("speech") ||
-            model.lowercased().contains("voice")
-        }
-        
-        // Priority order for TTS models
-        let preferredModels = [
-            "bark:latest",
-            "bark",
-            "tortoise-tts:latest",
-            "tortoise-tts",
-            "coqui-tts:latest",
-            "coqui-tts"
-        ]
-        
-        // First try to find a known TTS model
-        for model in preferredModels {
-            if ttsModels.contains(model) {
-                selectedModel = model
-                return
-            }
-        }
-        
-        // If no known TTS model found, use the first TTS model available
-        if !ttsModels.isEmpty {
-            selectedModel = ttsModels.first ?? ""
-            return
-        }
-        
-        // If no TTS models found, check if sematre/orpheus:en is available
-        // Note: This might not be a TTS model, but we'll handle it specially
+        // Only look for orpheus model
         if availableModels.contains("sematre/orpheus:en") {
             selectedModel = "sematre/orpheus:en"
             return
         }
         
-        // If no preferred model found, use the first available
-        if !availableModels.isEmpty {
-            selectedModel = availableModels.first ?? ""
-        }
+        // If orpheus not found, don't select any model
+        selectedModel = ""
     }
     
     func speak(_ text: String) {
@@ -146,18 +109,10 @@ class OllamaTTSManager: NSObject, ObservableObject {
     }
     
     private func generateSpeech(text: String, completion: @escaping (Data?) -> Void) {
-        // Check if this is a known TTS model
-        let isKnownTTSModel = selectedModel.lowercased().contains("tts") || 
-                             selectedModel.lowercased().contains("bark") || 
-                             selectedModel.lowercased().contains("tortoise") ||
-                             selectedModel.lowercased().contains("coqui") ||
-                             selectedModel.lowercased().contains("speech") ||
-                             selectedModel.lowercased().contains("voice")
-        
-        if !isKnownTTSModel && !selectedModel.contains("sematre/orpheus") {
-            // This is likely not a TTS model
+        // Only work with orpheus model
+        if !selectedModel.contains("sematre/orpheus") {
             DispatchQueue.main.async {
-                self.errorMessage = "Selected model '\(self.selectedModel)' is not a TTS model. Please install a TTS model like 'bark' or 'tortoise-tts'."
+                self.errorMessage = "Only sematre/orpheus:en model is supported. Please install it using 'ollama pull sematre/orpheus:en'."
                 completion(nil)
             }
             return
@@ -224,7 +179,7 @@ class OllamaTTSManager: NSObject, ObservableObject {
                     // If we get text back instead of audio, it means the model doesn't support TTS
                     if selectedModelSnapshot.contains("sematre/orpheus") {
                         DispatchQueue.main.async {
-                            self?.errorMessage = "sematre/orpheus:en is a language model, not a TTS model. Please install a TTS model like 'bark' or 'tortoise-tts'."
+                            self?.errorMessage = "sematre/orpheus:en is a language model, not a TTS model. This app currently only supports orpheus for TTS functionality."
                             completion(nil)
                         }
                         return
