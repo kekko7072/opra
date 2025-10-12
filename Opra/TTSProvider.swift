@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import Combine
 
 enum TTSProvider: String, CaseIterable {
     case system = "System TTS"
@@ -24,7 +25,18 @@ class TTSProviderManager: ObservableObject {
     init() {
         self.systemTTSManager = TextToSpeechManager()
         self.ollamaTTSManager = OllamaTTSManager()
+        
+        // Forward state changes from underlying managers
+        systemTTSManager.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        
+        ollamaTTSManager.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
     }
+    
+    private var cancellables = Set<AnyCancellable>()
     
     func setProvider(_ provider: TTSProvider) {
         currentProvider = provider

@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Get version from project
+      id: version
+      run: |
+        VERSION=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
+    - name: Build and archive
+      run: |
+        xcodebuild -project Opra.xcodeproj \
+          -scheme Opra \
+          -configuration Release \
+          -archivePath Opra.xcarchive \
+          archive
+    
+    - name: Export IPA
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath Opra.xcarchive \
+          -exportPath ./build \
+          -exportOptionsPlist ./ExportOptions.plist
+    
+    - name: Create DMG
+      run: |
+        # Create a temporary directory for the DMG
+        mkdir -p dmg_temp
+        
+        # Copy the app to the DMG directory
+        cp -R ./build/Opra.app dmg_temp/
+        
+        # Create a symbolic link to Applications
+        ln -s /Applications dmg_temp/Applications
+        
+        # Create the DMG
+        hdiutil create -volname "Opra ${{ steps.version.outputs.version }}" \
+          -srcfolder dmg_temp \
+          -ov -format UDZO \
+          Opra-${{ steps.version.outputs.version }}.dmg
+        
+        # Clean up
+        rm -rf dmg_temp
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        release_name: Release v${{ steps.version.outputs.version }}
+        body: |
+          ## Changes in this release
+          
+          - Automated release from main branch
+          - Built with Xcode on macOS
+          
+          ## Downloads
+          
+          - **Opra.dmg**: macOS application installer
+          
+          ## Installation
+          
+          1. Download the DMG file
+          2. Open the DMG file
+          3. Drag Opra.app to your Applications folder
+          4. Launch Opra from your Applications folder
+        draft: false
+        prerelease: false
+    
+    - name: Upload DMG
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./Opra-${{ steps.version.outputs.version }}.dmg
+        asset_name: Opra-${{ steps.version.outputs.version }}.dmg
+        asset_content_type: application/octet-stream
+    
+    - name: Upload App
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/Opra.app
+        asset_name: Opra-${{ steps.version.outputs.version }}.app.zip
+        asset_content_type: application/zip

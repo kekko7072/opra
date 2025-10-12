@@ -15,6 +15,8 @@
 		A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */; };
 		BF12B9402E9BE456006C1D92 /* OllamaTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */; };
 		BF12B9422E9BE461006C1D92 /* TTSProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B9412E9BE461006C1D92 /* TTSProvider.swift */; };
+		BFD9AF1D2E9BF00F0084C9B4 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = BFD9AF1C2E9BF00F0084C9B4 /* README.md */; };
+		BFD9AF1F2E9BF0310084C9B4 /* ExportOptions.plist in Resources */ = {isa = PBXBuildFile; fileRef = BFD9AF1E2E9BF0310084C9B4 /* ExportOptions.plist */; };
 		BFEB1A4A2E9BDD1300FBE98D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFEB1A492E9BDD1300FBE98D /* SettingsManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +30,8 @@
 		A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextToSpeechManager.swift; sourceTree = "<group>"; };
 		BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTTSManager.swift; sourceTree = "<group>"; };
 		BF12B9412E9BE461006C1D92 /* TTSProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSProvider.swift; sourceTree = "<group>"; };
+		BFD9AF1C2E9BF00F0084C9B4 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		BFD9AF1E2E9BF0310084C9B4 /* ExportOptions.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ExportOptions.plist; sourceTree = "<group>"; };
 		BFEB1A492E9BDD1300FBE98D /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		BFEB1A4B2E9BDD2800FBE98D /* Opra.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Opra.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -46,6 +50,8 @@
 		A1234567890ABCDEF1234559 = {
 			isa = PBXGroup;
 			children = (
+				BFD9AF1E2E9BF0310084C9B4 /* ExportOptions.plist */,
+				BFD9AF1C2E9BF00F0084C9B4 /* README.md */,
 				A1234567890ABCDEF123455A /* Opra */,
 				A1234567890ABCDEF1234562 /* Products */,
 			);
@@ -119,7 +125,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A1234567890ABCDEF123455E /* Build configuration list for PBXProject "PDFReader" */;
+			buildConfigurationList = A1234567890ABCDEF123455E /* Build configuration list for PBXProject "Opra" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -142,8 +148,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFD9AF1D2E9BF00F0084C9B4 /* README.md in Resources */,
 				A1234567890ABCDEF123456E /* Preview Assets.xcassets in Resources */,
 				A1234567890ABCDEF123456B /* Assets.xcassets in Resources */,
+				BFD9AF1F2E9BF0310084C9B4 /* ExportOptions.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,7 +168,7 @@
 				A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */,
 				BF12B9422E9BE461006C1D92 /* TTSProvider.swift in Sources */,
 				A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */,
-				A1234567890ABCDEF1234567 /* PDFReaderApp.swift in Sources */,
+				A1234567890ABCDEF1234567 /* OpraApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,7 +312,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
-				PRODUCT_NAME = "Opra";
+				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -329,7 +337,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
-				PRODUCT_NAME = "Opra";
+				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};

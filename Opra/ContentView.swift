@@ -13,6 +13,15 @@ struct ContentView: View {
     @State private var showingPageControls = false
     @State private var showingOllamaSetup = false
     
+    // Computed property for button image
+    private var buttonImageName: String {
+        if ttsProviderManager.isSpeaking {
+            return ttsProviderManager.isPaused ? "play.fill" : "pause.fill"
+        } else {
+            return "play.fill"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Top Navigation Bar
@@ -213,7 +222,7 @@ struct ContentView: View {
                                 ttsProviderManager.speak(pdfExtractor.extractedText)
                             }
                         }) {
-                            Image(systemName: ttsProviderManager.isSpeaking ? (ttsProviderManager.isPaused ? "play.fill" : "pause.fill") : "play.fill")
+                            Image(systemName: buttonImageName)
                                 .font(.title2)
                                 .foregroundColor(.primary)
                         }
@@ -370,9 +379,6 @@ struct PDFViewerView: View {
     @Binding var currentPage: Int
     @ObservedObject var ttsProviderManager: TTSProviderManager
     @State private var pdfView = PDFView()
-    @State private var readingMarker: CGRect = .zero
-    @State private var markerVisible: Bool = false
-    @State private var markerTimer: Timer?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -420,14 +426,6 @@ struct PDFViewerView: View {
                         setupPDFView()
                     }
                 
-                // Reading marker overlay
-                if markerVisible {
-                    Rectangle()
-                        .fill(Color.yellow.opacity(0.3))
-                        .frame(width: readingMarker.width, height: readingMarker.height)
-                        .position(x: readingMarker.midX, y: readingMarker.midY)
-                        .animation(.easeInOut(duration: 0.5), value: readingMarker)
-                }
                 
                 // Progress indicator
                 if ttsProviderManager.isSpeaking {
@@ -469,49 +467,8 @@ struct PDFViewerView: View {
         pdfView.displayDirection = .vertical
         pdfView.interpolationQuality = .high
         
-        // Start marker tracking when speaking
-        startMarkerTracking()
     }
     
-    private func startMarkerTracking() {
-        markerTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-            Task { @MainActor in
-                if ttsProviderManager.isSpeaking {
-                    updateReadingMarker()
-                } else {
-                    markerVisible = false
-                }
-            }
-        }
-    }
-    
-    private func updateReadingMarker() {
-        // Calculate approximate position based on reading progress
-        let progress = ttsProviderManager.readingProgress
-        let totalHeight = pdfView.documentView?.frame.height ?? 1000
-        let markerHeight: CGFloat = 20
-        let markerY = totalHeight * progress - markerHeight / 2
-        
-        readingMarker = CGRect(
-            x: 0,
-            y: max(0, min(markerY, totalHeight - markerHeight)),
-            width: pdfView.frame.width,
-            height: markerHeight
-        )
-        
-        markerVisible = true
-        
-        // Auto-scroll to keep marker visible
-        if let scrollView = pdfView.enclosingScrollView {
-            let visibleRect = scrollView.documentVisibleRect
-            let markerRect = readingMarker
-            
-            if markerRect.minY < visibleRect.minY || markerRect.maxY > visibleRect.maxY {
-                let targetY = max(0, markerRect.midY - visibleRect.height / 2)
-                scrollView.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: targetY))
-            }
-        }
-    }
     
     private func updateCurrentPage() {
         if let page = pdfView.currentPage {
@@ -813,12 +770,34 @@ struct OllamaSetupView: View {
                         
                         Text(ollamaTTSManager.isAvailable ? "Ollama is running" : "Ollama is not available")
                             .font(.subheadline)
+                        
+                        Spacer()
+                        
+                        if !ollamaTTSManager.isAvailable {
+                            Button("Retry") {
+                                ollamaTTSManager.retryConnection()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(ollamaTTSManager.isRetrying)
+                        }
                     }
                     
                     if let error = ollamaTTSManager.errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(8)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(4)
+                            
+                            if error.contains("not running") || error.contains("CannotConnectToHost") {
+                                Text("💡 Tip: Make sure Ollama is installed and running. Try running 'ollama serve' in Terminal.")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        }
                     }
                 }
                 
@@ -910,6 +889,13 @@ struct OllamaSetupView: View {
                                 .background(Color(NSColor.controlBackgroundColor))
                                 .cornerRadius(4)
                         }
+                        
+                        Text("Note: sematre/orpheus:en is a language model, not a TTS model. You need to install actual TTS models like the ones above.")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                            .padding(8)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(4)
                     }
                 }
                 
@@ -923,8 +909,22 @@ struct OllamaSetupView: View {
                         
                         List(ollamaTTSManager.availableModels, id: \.self) { model in
                             HStack {
-                                Text(model)
-                                    .font(.subheadline)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(model)
+                                        .font(.subheadline)
+                                    
+                                    // Show model type
+                                    let isTTSModel = model.lowercased().contains("tts") || 
+                                                   model.lowercased().contains("bark") || 
+                                                   model.lowercased().contains("tortoise") ||
+                                                   model.lowercased().contains("coqui") ||
+                                                   model.lowercased().contains("speech") ||
+                                                   model.lowercased().contains("voice")
+                                    
+                                    Text(isTTSModel ? "TTS Model" : "Language Model")
+                                        .font(.caption2)
+                                        .foregroundColor(isTTSModel ? .green : .orange)
+                                }
                                 
                                 Spacer()
                                 

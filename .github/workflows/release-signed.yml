@@ -1,0 +1,201 @@
+name: Release with Code Signing
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Get version from project
+      id: version
+      run: |
+        VERSION=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
+    - name: Import Code Signing Certificate
+      if: env.CERTIFICATE_BASE64 != ''
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+      run: |
+        # Create variables
+        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        
+        # Import certificate from secrets
+        echo -n "$CERTIFICATE_BASE64" | base64 --decode --output $CERTIFICATE_PATH
+        
+        # Create temporary keychain
+        security create-keychain -p "$CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
+        
+        # Import certificate to keychain
+        security import $CERTIFICATE_PATH -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        
+        # Enable codesigning from a non-interactive shell
+        security set-key-partition-list -S apple-tool:,apple: -k "$CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
+        
+        # Download and install WWDR certificate
+        curl -o $RUNNER_TEMP/AppleWWDRCA.cer https://developer.apple.com/certificationauthority/AppleWWDRCA.cer
+        security import $RUNNER_TEMP/AppleWWDRCA.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
+        
+        # Set keychain search list
+        security list-keychains -d user -s $KEYCHAIN_PATH login.keychain
+        
+        # Set default keychain
+        security default-keychain -s $KEYCHAIN_PATH
+        
+        # Set partition list
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
+    
+    - name: Build and archive
+      run: |
+        xcodebuild -project Opra.xcodeproj \
+          -scheme Opra \
+          -configuration Release \
+          -archivePath Opra.xcarchive \
+          CODE_SIGN_IDENTITY="${{ secrets.CODE_SIGN_IDENTITY }}" \
+          PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_SPECIFIER }}" \
+          archive
+    
+    - name: Export IPA
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath Opra.xcarchive \
+          -exportPath ./build \
+          -exportOptionsPlist ./ExportOptions.plist \
+          CODE_SIGN_IDENTITY="${{ secrets.CODE_SIGN_IDENTITY }}" \
+          PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_SPECIFIER }}"
+    
+    - name: Notarize App
+      if: env.APPLE_ID != ''
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        TEAM_ID: ${{ secrets.TEAM_ID }}
+      run: |
+        # Create a ZIP file for notarization
+        cd build
+        zip -r Opra.zip Opra.app
+        
+        # Submit for notarization
+        xcrun notarytool submit Opra.zip \
+          --apple-id "$APPLE_ID" \
+          --password "$APPLE_PASSWORD" \
+          --team-id "$TEAM_ID" \
+          --wait
+        
+        # Staple the notarization
+        xcrun stapler staple Opra.app
+        
+        # Create a ZIP file of the stapled app
+        zip -r Opra-notarized.zip Opra.app
+        cd ..
+    
+    - name: Create DMG
+      run: |
+        # Create a temporary directory for the DMG
+        mkdir -p dmg_temp
+        
+        # Copy the app to the DMG directory
+        if [ -f "./build/Opra-notarized.zip" ]; then
+          # Use notarized version if available
+          cd build && unzip -o Opra-notarized.zip && cd ..
+          cp -R ./build/Opra.app dmg_temp/
+        else
+          # Use regular version
+          cp -R ./build/Opra.app dmg_temp/
+        fi
+        
+        # Create a symbolic link to Applications
+        ln -s /Applications dmg_temp/Applications
+        
+        # Create the DMG
+        hdiutil create -volname "Opra ${{ steps.version.outputs.version }}" \
+          -srcfolder dmg_temp \
+          -ov -format UDZO \
+          Opra-${{ steps.version.outputs.version }}.dmg
+        
+        # Clean up
+        rm -rf dmg_temp
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        release_name: Release v${{ steps.version.outputs.version }}
+        body: |
+          ## Changes in this release
+          
+          - Automated release from main branch
+          - Built with Xcode on macOS
+          - Code signed and notarized for macOS distribution
+          
+          ## Downloads
+          
+          - **Opra.dmg**: macOS application installer (recommended)
+          - **Opra.app.zip**: Direct application bundle
+          
+          ## Installation
+          
+          1. Download the DMG file
+          2. Open the DMG file
+          3. Drag Opra.app to your Applications folder
+          4. Launch Opra from your Applications folder
+          
+          ## System Requirements
+          
+          - macOS 12.0 or later
+          - Intel or Apple Silicon Mac
+        draft: false
+        prerelease: false
+    
+    - name: Upload DMG
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./Opra-${{ steps.version.outputs.version }}.dmg
+        asset_name: Opra-${{ steps.version.outputs.version }}.dmg
+        asset_content_type: application/octet-stream
+    
+    - name: Upload App
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/Opra.app
+        asset_name: Opra-${{ steps.version.outputs.version }}.app.zip
+        asset_content_type: application/zip
+    
+    - name: Clean up keychain
+      if: always() && env.CERTIFICATE_BASE64 != ''
+      run: |
+        security delete-keychain $RUNNER_TEMP/app-signing.keychain-db

@@ -12,6 +12,7 @@ class OllamaTTSManager: NSObject, ObservableObject {
     @Published var isPaused: Bool = false
     @Published var speechRate: Float = 1.0
     @Published var readingProgress: Double = 0.0
+    @Published var isRetrying: Bool = false
     
     private let ollamaBaseURL = "http://localhost:11434"
     private var audioPlayer: AVAudioPlayer?
@@ -25,36 +26,65 @@ class OllamaTTSManager: NSObject, ObservableObject {
     func checkOllamaAvailability() {
         guard let url = URL(string: "\(ollamaBaseURL)/api/tags") else {
             isAvailable = false
+            errorMessage = "Invalid Ollama URL"
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.timeoutInterval = 5.0 // Add timeout
         
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     self?.isAvailable = false
-                    self?.errorMessage = "Ollama not available: \(error.localizedDescription)"
+                    if (error as NSError).code == NSURLErrorCannotConnectToHost {
+                        self?.errorMessage = "Ollama is not running. Please install and start Ollama first."
+                    } else if (error as NSError).code == NSURLErrorTimedOut {
+                        self?.errorMessage = "Ollama connection timed out. Please check if Ollama is running."
+                    } else {
+                        self?.errorMessage = "Ollama not available: \(error.localizedDescription)"
+                    }
                     return
                 }
                 
-                if let data = data,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let models = json["models"] as? [[String: Any]] {
-                    
-                    self?.isAvailable = true
-                    self?.availableModels = models.compactMap { $0["name"] as? String }
-                    self?.selectBestTTSModel()
+                if let httpResponse = response as? HTTPURLResponse {
+                    if httpResponse.statusCode == 200 {
+                        if let data = data,
+                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let models = json["models"] as? [[String: Any]] {
+                            
+                            self?.isAvailable = true
+                            self?.errorMessage = nil
+                            self?.availableModels = models.compactMap { $0["name"] as? String }
+                            self?.selectBestTTSModel()
+                        } else {
+                            self?.isAvailable = false
+                            self?.errorMessage = "Could not parse Ollama response"
+                        }
+                    } else {
+                        self?.isAvailable = false
+                        self?.errorMessage = "Ollama server returned status \(httpResponse.statusCode)"
+                    }
                 } else {
                     self?.isAvailable = false
-                    self?.errorMessage = "Could not parse Ollama response"
+                    self?.errorMessage = "Invalid response from Ollama server"
                 }
             }
         }.resume()
     }
     
     private func selectBestTTSModel() {
+        // Filter for actual TTS models first
+        let ttsModels = availableModels.filter { model in
+            model.lowercased().contains("tts") || 
+            model.lowercased().contains("bark") || 
+            model.lowercased().contains("tortoise") ||
+            model.lowercased().contains("coqui") ||
+            model.lowercased().contains("speech") ||
+            model.lowercased().contains("voice")
+        }
+        
         // Priority order for TTS models
         let preferredModels = [
             "bark:latest",
@@ -65,11 +95,25 @@ class OllamaTTSManager: NSObject, ObservableObject {
             "coqui-tts"
         ]
         
+        // First try to find a known TTS model
         for model in preferredModels {
-            if availableModels.contains(model) {
+            if ttsModels.contains(model) {
                 selectedModel = model
                 return
             }
+        }
+        
+        // If no known TTS model found, use the first TTS model available
+        if !ttsModels.isEmpty {
+            selectedModel = ttsModels.first ?? ""
+            return
+        }
+        
+        // If no TTS models found, check if sematre/orpheus:en is available
+        // Note: This might not be a TTS model, but we'll handle it specially
+        if availableModels.contains("sematre/orpheus:en") {
+            selectedModel = "sematre/orpheus:en"
+            return
         }
         
         // If no preferred model found, use the first available
@@ -102,6 +146,25 @@ class OllamaTTSManager: NSObject, ObservableObject {
     }
     
     private func generateSpeech(text: String, completion: @escaping (Data?) -> Void) {
+        // Check if this is a known TTS model
+        let isKnownTTSModel = selectedModel.lowercased().contains("tts") || 
+                             selectedModel.lowercased().contains("bark") || 
+                             selectedModel.lowercased().contains("tortoise") ||
+                             selectedModel.lowercased().contains("coqui") ||
+                             selectedModel.lowercased().contains("speech") ||
+                             selectedModel.lowercased().contains("voice")
+        
+        if !isKnownTTSModel && !selectedModel.contains("sematre/orpheus") {
+            // This is likely not a TTS model
+            DispatchQueue.main.async {
+                self.errorMessage = "Selected model '\(self.selectedModel)' is not a TTS model. Please install a TTS model like 'bark' or 'tortoise-tts'."
+                completion(nil)
+            }
+            return
+        }
+        
+        // For sematre/orpheus:en, we'll try to use it as a TTS model
+        // If it fails, we'll show an appropriate error message
         guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else {
             completion(nil)
             return
@@ -111,9 +174,19 @@ class OllamaTTSManager: NSObject, ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Different prompts for different model types
+        let prompt: String
+        if selectedModel.contains("sematre/orpheus") {
+            // For sematre/orpheus:en, try a TTS-specific prompt
+            prompt = "Convert the following text to speech: \(text)"
+        } else {
+            // For known TTS models, use the text directly
+            prompt = text
+        }
+        
         let requestBody: [String: Any] = [
             "model": selectedModel,
-            "prompt": text,
+            "prompt": prompt,
             "stream": false,
             "options": [
                 "temperature": 0.7,
@@ -128,7 +201,10 @@ class OllamaTTSManager: NSObject, ObservableObject {
             return
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        // Capture a snapshot of selectedModel to avoid accessing a MainActor-isolated property from a Sendable closure
+        let selectedModelSnapshot = self.selectedModel
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             if let error = error {
                 print("Ollama TTS Error: \(error)")
                 completion(nil)
@@ -140,9 +216,26 @@ class OllamaTTSManager: NSObject, ObservableObject {
                 return
             }
             
-            // Parse the response to extract audio data
-            // Note: This is a simplified implementation
-            // Real TTS models might return different formats
+            // Try to parse the response
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let responseText = json["response"] as? String {
+                    
+                    // If we get text back instead of audio, it means the model doesn't support TTS
+                    if selectedModelSnapshot.contains("sematre/orpheus") {
+                        DispatchQueue.main.async {
+                            self?.errorMessage = "sematre/orpheus:en is a language model, not a TTS model. Please install a TTS model like 'bark' or 'tortoise-tts'."
+                            completion(nil)
+                        }
+                        return
+                    }
+                }
+            } catch {
+                // If parsing fails, assume it's audio data
+            }
+            
+            // For now, we'll assume the data is audio
+            // In a real implementation, you'd need to handle different audio formats
             completion(data)
         }.resume()
     }
@@ -209,6 +302,16 @@ class OllamaTTSManager: NSObject, ObservableObject {
     
     func setModel(_ model: String) {
         selectedModel = model
+    }
+    
+    func retryConnection() {
+        isRetrying = true
+        errorMessage = nil
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.checkOllamaAvailability()
+            self.isRetrying = false
+        }
     }
     
     func installModel(_ modelName: String, completion: @escaping (Bool) -> Void) {
