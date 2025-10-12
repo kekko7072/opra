@@ -1,17 +1,12 @@
-name: Release
+name: Build and Release
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    types: [closed]
-    branches:
-      - main
 
 jobs:
-  release:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+  build-and-release:
     runs-on: macos-latest
     
     steps:
@@ -29,23 +24,35 @@ jobs:
       id: version
       run: |
         VERSION=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+        if [ -z "$VERSION" ]; then
+          VERSION="1.0.0"
+        fi
+        BUILD_NUMBER=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep CURRENT_PROJECT_VERSION | head -1 | awk '{print $3}')
+        if [ -z "$BUILD_NUMBER" ]; then
+          BUILD_NUMBER="1"
+        fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Version: $VERSION"
+        echo "build=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION-build$BUILD_NUMBER" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION (Build $BUILD_NUMBER)"
     
-    - name: Build and archive
+    - name: Build app
       run: |
         xcodebuild -project Opra.xcodeproj \
           -scheme Opra \
           -configuration Release \
-          -archivePath Opra.xcarchive \
-          archive
+          -derivedDataPath ./build \
+          clean build
     
-    - name: Export IPA
+    - name: Verify build output
       run: |
-        xcodebuild -exportArchive \
-          -archivePath Opra.xcarchive \
-          -exportPath ./build \
-          -exportOptionsPlist ./ExportOptions.plist
+        echo "Checking build output..."
+        ls -la ./build/Build/Products/Release/
+        if [ ! -d "./build/Build/Products/Release/Opra.app" ]; then
+          echo "Error: Opra.app not found!"
+          exit 1
+        fi
+        echo "Build successful!"
     
     - name: Create DMG
       run: |
@@ -53,7 +60,7 @@ jobs:
         mkdir -p dmg_temp
         
         # Copy the app to the DMG directory
-        cp -R ./build/Opra.app dmg_temp/
+        cp -R ./build/Build/Products/Release/Opra.app dmg_temp/
         
         # Create a symbolic link to Applications
         ln -s /Applications dmg_temp/Applications
@@ -66,50 +73,74 @@ jobs:
         
         # Clean up
         rm -rf dmg_temp
+        
+        echo "DMG created successfully"
+        ls -lh Opra-${{ steps.version.outputs.version }}.dmg
+    
+    - name: Create ZIP of app
+      run: |
+        cd ./build/Build/Products/Release/
+        zip -r $GITHUB_WORKSPACE/Opra-${{ steps.version.outputs.version }}.app.zip Opra.app
+        cd $GITHUB_WORKSPACE
+        echo "ZIP created successfully"
+        ls -lh Opra-${{ steps.version.outputs.version }}.app.zip
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        cat > release_notes.md << 'EOF'
+        ## Opra v${{ steps.version.outputs.version }}
+        
+        ### 🚀 What's New
+        
+        Automated release built from the latest main branch commit.
+        
+        ### 📦 Downloads
+        
+        - **Opra-${{ steps.version.outputs.version }}.dmg**: macOS disk image (recommended)
+        - **Opra-${{ steps.version.outputs.version }}.app.zip**: Standalone app bundle
+        
+        ### 📝 Installation
+        
+        #### Option 1: Using DMG (Recommended)
+        1. Download the `.dmg` file
+        2. Open the downloaded `.dmg` file
+        3. Drag the Opra app icon to your Applications folder
+        4. Launch Opra from your Applications folder
+        
+        #### Option 2: Using ZIP
+        1. Download the `.app.zip` file
+        2. Extract the ZIP file
+        3. Move Opra.app to your Applications folder
+        4. Launch Opra from your Applications folder
+        
+        ### ⚠️ Security Note
+        
+        This app is not code-signed. You may need to:
+        1. Right-click (or Control-click) the app and select "Open"
+        2. Or go to System Preferences > Security & Privacy to allow the app to run
+        
+        ### 📋 Build Information
+        
+        - **Version**: ${{ steps.version.outputs.version }}
+        - **Build**: ${{ steps.version.outputs.build }}
+        - **Commit**: ${{ github.sha }}
+        - **Built with**: Xcode on macOS (latest stable)
+        EOF
+        
+        echo "Release notes generated"
     
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: v${{ steps.version.outputs.version }}
-        release_name: Release v${{ steps.version.outputs.version }}
-        body: |
-          ## Changes in this release
-          
-          - Automated release from main branch
-          - Built with Xcode on macOS
-          
-          ## Downloads
-          
-          - **Opra.dmg**: macOS application installer
-          
-          ## Installation
-          
-          1. Download the DMG file
-          2. Open the DMG file
-          3. Drag Opra.app to your Applications folder
-          4. Launch Opra from your Applications folder
+        tag: ${{ steps.version.outputs.tag }}
+        name: "Opra v${{ steps.version.outputs.version }}"
+        bodyFile: release_notes.md
         draft: false
         prerelease: false
-    
-    - name: Upload DMG
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./Opra-${{ steps.version.outputs.version }}.dmg
-        asset_name: Opra-${{ steps.version.outputs.version }}.dmg
-        asset_content_type: application/octet-stream
-    
-    - name: Upload App
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/Opra.app
-        asset_name: Opra-${{ steps.version.outputs.version }}.app.zip
-        asset_content_type: application/zip
+        artifacts: |
+          Opra-${{ steps.version.outputs.version }}.dmg
+          Opra-${{ steps.version.outputs.version }}.app.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        artifactErrorsFailBuild: true

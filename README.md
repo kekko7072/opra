@@ -2,6 +2,10 @@
 
 ![App Icon](./app-icon.png)
 
+## Demo
+
+https://github.com/user-attachments/assets/app-recording.mp4
+
 A simple macOS app that reads PDF documents aloud using AI-powered text-to-speech technology.
 
 ## How it works
@@ -24,7 +28,7 @@ PDF → Extract Text → AI Speech → Audio Playback
 
 ## Key Features
 
-- **AI-Powered Voices**: High-quality text-to-speech using Ollama
+- **AI-Powered Voices**: High-quality text-to-speech
 - **Page Selection**: Read specific pages or entire document
 - **Speed Control**: Adjust reading speed
 - **Progress Tracking**: See current reading position
@@ -34,16 +38,25 @@ PDF → Extract Text → AI Speech → Audio Playback
 
 - macOS 12.0 or later
 - PDF files with readable text (not scanned images)
-- Ollama installed for AI voices
 
-## Installation
+## Download & Installation
 
-1. Download from [Releases](https://github.com/yourusername/Opra/releases)
-2. Open DMG and drag to Applications
-3. Launch Opra
+### Option 1: Download Pre-built App
 
-## Setup Ollama (for AI voices)
+1. Go to the [Releases page](https://github.com/kekko7072/Opra/releases)
+2. Download the latest `.dmg` file
+3. Open the downloaded `.dmg` file
+4. Drag the Opra app icon to your Applications folder
+5. Launch Opra from your Applications folder
 
-1. Install [Ollama](https://ollama.ai)
-2. Run `ollama serve` in Terminal
-3. Select "Ollama TTS" in Opra settings
+**Note**: On first launch, macOS may ask you to confirm opening an app from the internet. Right-click the app and select "Open" if needed.
+
+### Option 2: Build from Source
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/Opra.git
+   cd Opra
+   ```
+2. Open `Opra.xcodeproj` in Xcode
+3. Build and run the project (⌘R)
