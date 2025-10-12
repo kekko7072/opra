@@ -1,3 +1,10 @@
+//
+//  TextToSpeechManager.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import Foundation
 import AVFoundation
 import Speech
@@ -13,6 +20,7 @@ import Speech
     @Published var isPersonalVoiceAuthorized: Bool = false
     @Published var personalVoiceStatus: String = "Not requested"
     @Published var enableSSML: Bool = false
+    @Published var elapsedTime: TimeInterval = 0.0
     
     private let synthesizer = AVSpeechSynthesizer()
     private var currentUtterance: AVSpeechUtterance?
@@ -24,6 +32,7 @@ import Speech
     private var pausedTime: TimeInterval = 0.0
     private var totalPausedTime: TimeInterval = 0.0
     private var timeoutTimer: DispatchSourceTimer?
+    private var elapsedTimeTimer: DispatchSourceTimer?
     
     // Chunking support
     private var isChunked: Bool = false
@@ -295,9 +304,11 @@ import Speech
     }
     
     private func startProgressTracking() {
-        // Cancel any existing timer
+        // Cancel any existing timers
         progressTimer?.cancel()
         progressTimer = nil
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
 
         // Create a timer on a user-initiated QoS queue to avoid priority inversion
         let queue = DispatchQueue(label: "tts.progress.timer", qos: .userInitiated)
@@ -344,6 +355,42 @@ import Speech
             }
         }
         progressTimer = timer
+        timer.resume()
+        
+        // Start elapsed time timer
+        startElapsedTimeTracking()
+    }
+    
+    private func startElapsedTimeTracking() {
+        // Cancel any existing elapsed time timer
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
+        
+        // Create a timer for elapsed time updates
+        let queue = DispatchQueue(label: "tts.elapsed.timer", qos: .userInitiated)
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + 1.0, repeating: 1.0) // Update every second
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            
+            // If not speaking, stop the timer
+            if !self.isSpeaking {
+                self.elapsedTimeTimer?.cancel()
+                self.elapsedTimeTimer = nil
+                return
+            }
+            
+            // Calculate elapsed time
+            if let startDate = self.utteranceStartDate {
+                let elapsed = Date().timeIntervalSince(startDate)
+                let actualElapsed = elapsed - self.totalPausedTime
+                
+                Task { @MainActor in
+                    self.elapsedTime = actualElapsed
+                }
+            }
+        }
+        elapsedTimeTimer = timer
         timer.resume()
     }
     
@@ -408,6 +455,8 @@ import Speech
         // Cancel all timers first
         progressTimer?.cancel()
         progressTimer = nil
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
         timeoutTimer?.cancel()
         timeoutTimer = nil
         
@@ -419,6 +468,7 @@ import Speech
         utteranceStartDate = nil
         readingProgress = 0.0
         currentWordIndex = 0
+        elapsedTime = 0.0
         isSpeaking = false
         isPaused = false
         
@@ -807,9 +857,12 @@ import Speech
         self.currentUtterance = nil
         self.progressTimer?.cancel()
         self.progressTimer = nil
+        self.elapsedTimeTimer?.cancel()
+        self.elapsedTimeTimer = nil
         self.timeoutTimer?.cancel()
         self.timeoutTimer = nil
         self.utteranceStartDate = nil
+        self.elapsedTime = 0.0
         
         // Call chunk completion handler if available
         if let handler = self.chunkCompletionHandler {

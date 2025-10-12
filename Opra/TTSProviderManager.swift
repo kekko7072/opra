@@ -1,3 +1,10 @@
+//
+//  TTSProviderManager.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import Foundation
 import AVFoundation
 import Combine
@@ -37,6 +44,74 @@ class TTSProviderManager: ObservableObject {
     }
     
     private var cancellables = Set<AnyCancellable>()
+    
+    // Computed properties to expose current provider's state
+    var isSpeaking: Bool {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.isSpeaking
+        case .ollama:
+            return ollamaTTSManager.isSpeaking
+        }
+    }
+    
+    var isPaused: Bool {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.isPaused
+        case .ollama:
+            return ollamaTTSManager.isPaused
+        }
+    }
+    
+    var readingProgress: Double {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.readingProgress
+        case .ollama:
+            return ollamaTTSManager.readingProgress
+        }
+    }
+    
+    var currentWordIndex: Int {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.currentWordIndex
+        case .ollama:
+            return ollamaTTSManager.currentWordIndex
+        }
+    }
+    
+    var totalWords: Int {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.totalWords
+        case .ollama:
+            return ollamaTTSManager.totalWords
+        }
+    }
+    
+    var elapsedTime: TimeInterval {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.elapsedTime
+        case .ollama:
+            return ollamaTTSManager.elapsedTime
+        }
+    }
+    
+    var speechRate: Float {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.speechRate
+        case .ollama:
+            return ollamaTTSManager.speechRate
+        }
+    }
+    
+    var currentVoice: AVSpeechSynthesisVoice? {
+        return systemTTSManager.currentVoice
+    }
     
     func setProvider(_ provider: TTSProvider) {
         currentProvider = provider
@@ -114,75 +189,12 @@ class TTSProviderManager: ObservableObject {
         }
     }
     
-    var isSpeaking: Bool {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.isSpeaking
-        case .ollama:
-            return ollamaTTSManager.isSpeaking
-        }
-    }
-    
-    var isPaused: Bool {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.isPaused
-        case .ollama:
-            return ollamaTTSManager.isPaused
-        }
-    }
-    
-    var speechRate: Float {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.speechRate
-        case .ollama:
-            return ollamaTTSManager.speechRate
-        }
-    }
-    
-    var readingProgress: Double {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.readingProgress
-        case .ollama:
-            return ollamaTTSManager.readingProgress
-        }
-    }
-    
-    var currentVoice: AVSpeechSynthesisVoice? {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.currentVoice
-        case .ollama:
-            return nil // Ollama doesn't use system voices
-        }
-    }
-    
     var availableVoices: [AVSpeechSynthesisVoice] {
         switch currentProvider {
         case .system:
             return systemTTSManager.availableVoices
         case .ollama:
             return []
-        }
-    }
-    
-    var currentWordIndex: Int {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.currentWordIndex
-        case .ollama:
-            return ollamaTTSManager.currentWordIndex
-        }
-    }
-    
-    var totalWords: Int {
-        switch currentProvider {
-        case .system:
-            return systemTTSManager.totalWords
-        case .ollama:
-            return ollamaTTSManager.totalWords
         }
     }
     

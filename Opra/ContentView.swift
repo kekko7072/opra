@@ -1,6 +1,11 @@
+//
+//  ContentView.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import SwiftUI
-import PDFKit
-import AVFoundation
 
 struct ContentView: View {
     @StateObject private var pdfExtractor = PDFTextExtractor()
@@ -473,7 +478,7 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        // Progress indicator
+                        // Progress indicator and timer
                         if pdfExtractor.isProcessing {
                             HStack {
                                 ProgressView()
@@ -488,14 +493,22 @@ struct ContentView: View {
                                     .progressViewStyle(LinearProgressViewStyle())
                                     .frame(width: 150)
                                 
-                                if settingsManager.enableFollowText {
-                                    Text("\(Int(ttsProviderManager.readingProgress * 100))% - Word \(ttsProviderManager.currentWordIndex) of \(ttsProviderManager.totalWords)")
+                                HStack(spacing: 8) {
+                                    if settingsManager.enableFollowText {
+                                        Text("\(Int(ttsProviderManager.readingProgress * 100))% - Word \(ttsProviderManager.currentWordIndex) of \(ttsProviderManager.totalWords)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text("\(Int(ttsProviderManager.readingProgress * 100))%")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    // Timer display
+                                    Text(formatTime(ttsProviderManager.elapsedTime))
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text("\(Int(ttsProviderManager.readingProgress * 100))%")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.blue)
+                                        .fontWeight(.medium)
                                 }
                             }
                         }
@@ -586,6 +599,12 @@ struct ContentView: View {
         pdfExtractor.clearText()
         selectedFileURL = nil
         showingPageControls = false
+    }
+    
+    private func formatTime(_ timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 

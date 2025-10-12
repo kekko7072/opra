@@ -1,3 +1,10 @@
+//
+//  SettingsManager.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import Foundation
 import AVFoundation
 

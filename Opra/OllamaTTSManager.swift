@@ -1,3 +1,10 @@
+//
+//  OllamaTTSManager.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import Foundation
 import AVFoundation
 
@@ -15,12 +22,15 @@ class OllamaTTSManager: NSObject, ObservableObject {
     @Published var isRetrying: Bool = false
     @Published var currentWordIndex: Int = 0
     @Published var totalWords: Int = 0
+    @Published var elapsedTime: TimeInterval = 0.0
     
     private let ollamaBaseURL = "http://localhost:11434"
     private var audioPlayer: AVAudioPlayer?
     private var currentAudioData: Data?
     private var fullText: String = ""
     private var words: [String] = []
+    private var elapsedTimeTimer: DispatchSourceTimer?
+    private var playbackStartDate: Date?
     
     override init() {
         super.init()
@@ -183,9 +193,11 @@ class OllamaTTSManager: NSObject, ObservableObject {
             isSpeaking = true
             isPaused = false
             currentAudioData = audioData
+            playbackStartDate = Date()
             
             // Start progress tracking
             startProgressTracking()
+            startElapsedTimeTracking()
         } catch {
             errorMessage = "Failed to play audio: \(error.localizedDescription)"
             isProcessing = false
@@ -236,6 +248,38 @@ class OllamaTTSManager: NSObject, ObservableObject {
         }
     }
     
+    private func startElapsedTimeTracking() {
+        // Cancel any existing elapsed time timer
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
+        
+        // Create a timer for elapsed time updates
+        let queue = DispatchQueue(label: "ollama.elapsed.timer", qos: .userInitiated)
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + 1.0, repeating: 1.0) // Update every second
+        timer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            
+            // If not speaking, stop the timer
+            if !self.isSpeaking {
+                self.elapsedTimeTimer?.cancel()
+                self.elapsedTimeTimer = nil
+                return
+            }
+            
+            // Calculate elapsed time
+            if let startDate = self.playbackStartDate {
+                let elapsed = Date().timeIntervalSince(startDate)
+                
+                Task { @MainActor in
+                    self.elapsedTime = elapsed
+                }
+            }
+        }
+        elapsedTimeTimer = timer
+        timer.resume()
+    }
+    
     func pauseSpeaking() {
         audioPlayer?.pause()
         isPaused = true
@@ -252,7 +296,13 @@ class OllamaTTSManager: NSObject, ObservableObject {
         isPaused = false
         readingProgress = 0.0
         currentWordIndex = 0
+        elapsedTime = 0.0
         currentAudioData = nil
+        playbackStartDate = nil
+        
+        // Cancel elapsed time timer
+        elapsedTimeTimer?.cancel()
+        elapsedTimeTimer = nil
     }
     
     func setSpeechRate(_ rate: Float) {

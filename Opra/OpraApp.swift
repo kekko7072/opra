@@ -1,3 +1,10 @@
+//
+//  OpraApp.swift
+//  Opra
+//
+//  Created by Francesco Vezzani on 12/10/25.
+//
+
 import SwiftUI
 
 @main

@@ -7,7 +7,6 @@
 
 import SwiftUI
 import PDFKit
-import AVFoundation
 
 struct PDFViewerView: View {
     let pdfDocument: PDFDocument

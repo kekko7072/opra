@@ -15,7 +15,7 @@
 		A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456F /* PDFTextExtractor.swift */; };
 		A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */; };
 		BF12B9402E9BE456006C1D92 /* OllamaTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */; };
-		BF12B9422E9BE461006C1D92 /* TTSProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B9412E9BE461006C1D92 /* TTSProvider.swift */; };
+		BF12B9422E9BE461006C1D92 /* TTSProviderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */; };
 		BF3C9B372E9BF97700E3DD44 /* OllamaSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B362E9BF97700E3DD44 /* OllamaSetupView.swift */; };
 		BF3C9B392E9BF98700E3DD44 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B382E9BF98700E3DD44 /* SettingsView.swift */; };
 		BF3C9B3B2E9BF9C000E3DD44 /* PDFViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B3A2E9BF9C000E3DD44 /* PDFViewerView.swift */; };
@@ -36,7 +36,7 @@
 		A1234567890ABCDEF123456F /* PDFTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractor.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextToSpeechManager.swift; sourceTree = "<group>"; };
 		BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTTSManager.swift; sourceTree = "<group>"; };
-		BF12B9412E9BE461006C1D92 /* TTSProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSProvider.swift; sourceTree = "<group>"; };
+		BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSProviderManager.swift; sourceTree = "<group>"; };
 		BF3C9B362E9BF97700E3DD44 /* OllamaSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSetupView.swift; sourceTree = "<group>"; };
 		BF3C9B382E9BF98700E3DD44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BF3C9B3A2E9BF9C000E3DD44 /* PDFViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewerView.swift; sourceTree = "<group>"; };
@@ -79,7 +79,7 @@
 				BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */,
 				A1234567890ABCDEF123456F /* PDFTextExtractor.swift */,
 				A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */,
-				BF12B9412E9BE461006C1D92 /* TTSProvider.swift */,
+				BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */,
 				BFEB1A492E9BDD1300FBE98D /* SettingsManager.swift */,
 				BF3C9B3C2E9BF9D200E3DD44 /* PDFViewRepresentable.swift */,
 				BFEB1A4B2E9BDD2800FBE98D /* Opra.entitlements */,
@@ -197,7 +197,7 @@
 				BFEB1A4A2E9BDD1300FBE98D /* SettingsManager.swift in Sources */,
 				A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */,
 				BF3C9B3F2E9BF9DD00E3DD44 /* VoicePickerView.swift in Sources */,
-				BF12B9422E9BE461006C1D92 /* TTSProvider.swift in Sources */,
+				BF12B9422E9BE461006C1D92 /* TTSProviderManager.swift in Sources */,
 				A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */,
 				BF3C9B3D2E9BF9D200E3DD44 /* PDFViewRepresentable.swift in Sources */,
 				A1234567890ABCDEF1234567 /* OpraApp.swift in Sources */,
@@ -359,7 +359,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -401,7 +401,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
