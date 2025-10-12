@@ -17,7 +17,7 @@ struct OllamaSetupView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header with close button
             HStack {
-                Text("Ollama TTS Setup")
+                Text("Ollama Setup")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
@@ -154,7 +154,7 @@ struct OllamaSetupView: View {
                                     .cornerRadius(4)
                             }
                             
-                            Text("Note: sematre/orpheus:en is the only supported TTS model for Ollama integration.")
+                            Text("Note: Orpheus supports multiple languages via specific tags (e.g., sematre/orpheus:en, :es, :de).")
                                 .font(.caption2)
                                 .foregroundColor(.blue)
                                 .padding(8)
@@ -243,7 +243,7 @@ struct OllamaSetupView: View {
                 .padding(.horizontal, 30)
                 .padding(.bottom, 30)
             }
-        }
+        }.padding()
     }
     
     func installModel(_ modelName: String) {
@@ -262,3 +262,4 @@ struct OllamaSetupView: View {
         }
     }
 }
+
