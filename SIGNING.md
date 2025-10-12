@@ -2,6 +2,7 @@
 
 Instruction for workflow of notarization of the macos app.
 
+
 ## For Developers: Setting Up Notarization
 
 If you fork this repository and want to enable automatic notarization in GitHub Actions, you'll need to set up the following secrets in your repository settings:
