@@ -60,37 +60,6 @@ struct PDFViewerView: View {
                     .onAppear {
                         setupPDFView()
                     }
-                
-                
-                // Progress indicator
-                if ttsProviderManager.isSpeaking {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            VStack {
-                                ProgressView(value: ttsProviderManager.readingProgress)
-                                    .progressViewStyle(LinearProgressViewStyle())
-                                    .frame(width: 200)
-                                
-                                if ttsProviderManager.currentProvider == .system {
-                                    Text("\(Int(ttsProviderManager.readingProgress * 100))% - Word \(ttsProviderManager.systemTTSManager.currentWordIndex) of \(ttsProviderManager.systemTTSManager.totalWords)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text("\(Int(ttsProviderManager.readingProgress * 100))%")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding()
-                            .background(Color(NSColor.controlBackgroundColor).opacity(0.8))
-                            .cornerRadius(8)
-                            Spacer()
-                        }
-                        .padding()
-                    }
-                }
             }
         }
     }

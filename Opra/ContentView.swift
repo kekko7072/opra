@@ -10,8 +10,9 @@ struct ContentView: View {
     @State private var selectedFileURL: URL?
     @State private var showingVoicePicker = false
     @State private var showingSettings = false
-    @State private var showingPageControls = false
+    @State private var showingPageControls = true
     @State private var showingOllamaSetup = false
+    @State private var showingTextPanel = true
     
     // Computed property for button image
     private var buttonImageName: String {
@@ -49,6 +50,11 @@ struct ContentView: View {
                     
                     Button("Page Controls") {
                         showingPageControls.toggle()
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    Button(showingTextPanel ? "Hide Text" : "Show Text") {
+                        showingTextPanel.toggle()
                     }
                     .buttonStyle(.bordered)
                 } else {
@@ -151,19 +157,51 @@ struct ContentView: View {
                         
                         Spacer()
                         
-                        Text("Reading pages \(pdfExtractor.startPage)-\(pdfExtractor.endPage)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Reading pages \(pdfExtractor.startPage)-\(pdfExtractor.endPage)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            if !pdfExtractor.extractedText.isEmpty {
+                                let wordCount = pdfExtractor.extractedText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+                                if pdfExtractor.isChunked {
+                                    Text("\(wordCount) words in chunk \(pdfExtractor.currentChunk + 1) of \(pdfExtractor.totalChunks)")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                } else {
+                                    Text("\(wordCount) words ready for TTS")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                            }
+                        }
                         
-                        Button("Read All") {
-                            pdfExtractor.setPageRange(start: 1, end: pdfExtractor.totalPages)
+                        Button("Re-chunk") {
+                            pdfExtractor.forceRechunk()
                         }
                         .buttonStyle(.bordered)
+                        .disabled(!pdfExtractor.isReadyToRead)
                         
-                        Button("Start Reading") {
-                            pdfExtractor.startReading()
-                            if settingsManager.autoStartReading && !pdfExtractor.extractedText.isEmpty {
-                                ttsProviderManager.speak(pdfExtractor.extractedText)
+                        Button(pdfExtractor.isChunked ? "Start Reading (\(pdfExtractor.totalChunks) chunks)" : "Start Reading") {
+                            // If currently speaking but paused, resume immediately
+                            if ttsProviderManager.isSpeaking {
+                                if ttsProviderManager.isPaused {
+                                    ttsProviderManager.resumeSpeaking()
+                                    return
+                                }
+                                // If already speaking and not paused, restart from current position
+                                ttsProviderManager.stopSpeaking()
+                            }
+
+                            // Ensure text is ready before starting TTS
+                            if !pdfExtractor.isReadyForTTS() {
+                                pdfExtractor.startReading()
+                                // After preparing text, start audio as soon as possible
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    self.startTTSIfReady()
+                                }
+                            } else {
+                                startTTSIfReady()
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -175,11 +213,108 @@ struct ContentView: View {
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
             }
             
-            // Main PDF Viewer Area
+            // Main Content Area
             if pdfExtractor.isReadyToRead {
-                if let pdfDocument = pdfExtractor.pdfDocumentForViewing {
-                    PDFViewerView(pdfDocument: pdfDocument, currentPage: $pdfExtractor.currentPage, ttsProviderManager: ttsProviderManager)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                HStack(spacing: 0) {
+                    // PDF Viewer
+                    if let pdfDocument = pdfExtractor.pdfDocumentForViewing {
+                        PDFViewerView(pdfDocument: pdfDocument, currentPage: $pdfExtractor.currentPage, ttsProviderManager: ttsProviderManager)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    
+                    // Text Display Panel (conditional)
+                    if showingTextPanel {
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack {
+                                Text("Extracted Text")
+                                    .font(.headline)
+                                    .padding(.horizontal, 12)
+                                    .padding(.top, 8)
+                                
+                                Spacer()
+                                
+                                // Chunk navigation controls
+                                if pdfExtractor.isChunked {
+                                    HStack(spacing: 8) {
+                                        Button("◀") {
+                                            pdfExtractor.previousChunk()
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .disabled(pdfExtractor.currentChunk <= 0)
+                                        
+                                        VStack(spacing: 2) {
+                                            Text("Chunk \(pdfExtractor.currentChunk + 1) of \(pdfExtractor.totalChunks)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            
+                                            let wordCount = pdfExtractor.extractedText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+                                            Text("\(wordCount) words")
+                                                .font(.caption2)
+                                                .foregroundColor(.orange)
+                                            
+                                            // Show current word being read (if follow text is enabled)
+                                            if settingsManager.enableFollowText && ttsProviderManager.isSpeaking && !pdfExtractor.highlightedWord.isEmpty {
+                                                Text("Reading: \"\(pdfExtractor.highlightedWord)\"")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.blue)
+                                                    .fontWeight(.medium)
+                                            }
+                                        }
+                                        
+                                        Button("▶") {
+                                            pdfExtractor.nextChunk()
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .disabled(pdfExtractor.currentChunk >= pdfExtractor.totalChunks - 1)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.top, 8)
+                                } else {
+                                    // Word count display for non-chunked text
+                                    if !pdfExtractor.extractedText.isEmpty {
+                                        let wordCount = pdfExtractor.extractedText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
+                                        VStack(spacing: 2) {
+                                            Text("\(wordCount) words ready for TTS")
+                                                .font(.caption)
+                                                .foregroundColor(.green)
+                                            
+                                            // Show current word being read (if follow text is enabled)
+                                            if settingsManager.enableFollowText && ttsProviderManager.isSpeaking && !pdfExtractor.highlightedWord.isEmpty {
+                                                Text("Reading: \"\(pdfExtractor.highlightedWord)\"")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.blue)
+                                                    .fontWeight(.medium)
+                                            }
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.top, 8)
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            ScrollView {
+                                if settingsManager.enableFollowText && ttsProviderManager.isSpeaking && !pdfExtractor.highlightedWord.isEmpty {
+                                    // Show highlighted text when speaking
+                                    Text(pdfExtractor.getHighlightedText())
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding()
+                                } else {
+                                    // Show normal text when not speaking
+                                    Text(pdfExtractor.extractedText)
+                                        .font(.system(.body, design: .monospaced))
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding()
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .frame(width: 400)
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                    }
                 }
             } else {
                 // Welcome/Instructions Area
@@ -219,7 +354,7 @@ struct ContentView: View {
                                     ttsProviderManager.pauseSpeaking()
                                 }
                             } else {
-                                ttsProviderManager.speak(pdfExtractor.extractedText)
+                                startTTSIfReady()
                             }
                         }) {
                             Image(systemName: buttonImageName)
@@ -314,9 +449,15 @@ struct ContentView: View {
                                     .progressViewStyle(LinearProgressViewStyle())
                                     .frame(width: 150)
                                 
-                                Text("\(Int(ttsProviderManager.readingProgress * 100))%")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                if settingsManager.enableFollowText {
+                                    Text("\(Int(ttsProviderManager.readingProgress * 100))% - Word \(ttsProviderManager.currentWordIndex) of \(ttsProviderManager.totalWords)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text("\(Int(ttsProviderManager.readingProgress * 100))%")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
                     }
@@ -362,10 +503,43 @@ struct ContentView: View {
         }
         .onAppear {
             ttsProviderManager.systemTTSManager.setSettingsManager(settingsManager)
+            ttsProviderManager.systemTTSManager.setPDFExtractor(pdfExtractor)
+            pdfExtractor.setSettingsManager(settingsManager)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
             ttsProviderManager.stopSpeaking()
         }
+    }
+    
+    private func startTTSIfReady() {
+        print("=== START TTS IF READY ===")
+        print("isReadyToRead: \(pdfExtractor.isReadyToRead)")
+        print("extractedText.isEmpty: \(pdfExtractor.extractedText.isEmpty)")
+        print("isProcessing: \(pdfExtractor.isProcessing)")
+        print("isReadyForTTS: \(pdfExtractor.isReadyForTTS())")
+        print("isChunked: \(pdfExtractor.isChunked)")
+        print("totalChunks: \(pdfExtractor.totalChunks)")
+        print("currentChunk: \(pdfExtractor.currentChunk)")
+        print("chunkedTextsArray.count: \(pdfExtractor.chunkedTextsArray.count)")
+        
+        guard pdfExtractor.isReadyForTTS() else {
+            print("Text not ready for TTS yet - waiting...")
+            // Wait a bit more and try again
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.startTTSIfReady()
+            }
+            return
+        }
+        
+        print("Start Reading - isChunked: \(pdfExtractor.isChunked), totalChunks: \(pdfExtractor.totalChunks)")
+        if pdfExtractor.isChunked {
+            print("Using speakChunkedText with \(pdfExtractor.chunkedTextsArray.count) chunks")
+            ttsProviderManager.speakChunkedText(pdfExtractor.chunkedTextsArray, startChunk: pdfExtractor.currentChunk)
+        } else {
+            print("Using regular speak method")
+            ttsProviderManager.speak(pdfExtractor.getCurrentChunkText())
+        }
+        print("=== END START TTS IF READY ===")
     }
     
     private func clearAll() {

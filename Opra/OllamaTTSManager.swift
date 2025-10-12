@@ -13,10 +13,14 @@ class OllamaTTSManager: NSObject, ObservableObject {
     @Published var speechRate: Float = 1.0
     @Published var readingProgress: Double = 0.0
     @Published var isRetrying: Bool = false
+    @Published var currentWordIndex: Int = 0
+    @Published var totalWords: Int = 0
     
     private let ollamaBaseURL = "http://localhost:11434"
     private var audioPlayer: AVAudioPlayer?
     private var currentAudioData: Data?
+    private var fullText: String = ""
+    private var words: [String] = []
     
     override init() {
         super.init()
@@ -95,7 +99,16 @@ class OllamaTTSManager: NSObject, ObservableObject {
         errorMessage = nil
         readingProgress = 0.0
         
-        generateSpeech(text: text) { [weak self] audioData in
+        // Preprocess text to handle formulas and special characters
+        let processedText = preprocessTextForTTS(text)
+        
+        // Set up word tracking
+        fullText = processedText
+        words = processedText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        totalWords = words.count
+        currentWordIndex = 0
+        
+        generateSpeech(text: processedText) { [weak self] audioData in
             DispatchQueue.main.async {
                 self?.isProcessing = false
                 
@@ -109,98 +122,63 @@ class OllamaTTSManager: NSObject, ObservableObject {
     }
     
     private func generateSpeech(text: String, completion: @escaping (Data?) -> Void) {
-        // Only work with orpheus model
-        if !selectedModel.contains("sematre/orpheus") {
+        // Check if we have a valid TTS model
+        guard !selectedModel.isEmpty else {
             DispatchQueue.main.async {
-                self.errorMessage = "Only sematre/orpheus:en model is supported. Please install it using 'ollama pull sematre/orpheus:en'."
+                self.errorMessage = "No TTS model selected"
                 completion(nil)
             }
             return
         }
         
-        // For sematre/orpheus:en, we'll try to use it as a TTS model
-        // If it fails, we'll show an appropriate error message
-        guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else {
+        // For now, we'll disable Ollama TTS since sematre/orpheus is a language model, not TTS
+        // In a real implementation, you'd need a proper TTS model like bark, xtts, or similar
+        DispatchQueue.main.async {
+            self.errorMessage = "Ollama TTS is not yet fully implemented. sematre/orpheus is a language model, not a TTS model. Please use System TTS for now."
             completion(nil)
-            return
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        // Different prompts for different model types
-        let prompt: String
-        if selectedModel.contains("sematre/orpheus") {
-            // For sematre/orpheus:en, try a TTS-specific prompt
-            prompt = "Convert the following text to speech: \(text)"
-        } else {
-            // For known TTS models, use the text directly
-            prompt = text
-        }
-        
-        let requestBody: [String: Any] = [
-            "model": selectedModel,
-            "prompt": prompt,
-            "stream": false,
-            "options": [
-                "temperature": 0.7,
-                "top_p": 0.9
-            ]
-        ]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        } catch {
-            completion(nil)
-            return
-        }
-        
-        // Capture a snapshot of selectedModel to avoid accessing a MainActor-isolated property from a Sendable closure
-        let selectedModelSnapshot = self.selectedModel
-        
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            if let error = error {
-                print("Ollama TTS Error: \(error)")
-                completion(nil)
-                return
-            }
-            
-            guard let data = data else {
-                completion(nil)
-                return
-            }
-            
-            // Try to parse the response
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let responseText = json["response"] as? String {
-                    
-                    // If we get text back instead of audio, it means the model doesn't support TTS
-                    if selectedModelSnapshot.contains("sematre/orpheus") {
-                        DispatchQueue.main.async {
-                            self?.errorMessage = "sematre/orpheus:en is a language model, not a TTS model. This app currently only supports orpheus for TTS functionality."
-                            completion(nil)
-                        }
-                        return
-                    }
-                }
-            } catch {
-                // If parsing fails, assume it's audio data
-            }
-            
-            // For now, we'll assume the data is audio
-            // In a real implementation, you'd need to handle different audio formats
-            completion(data)
-        }.resume()
+        // TODO: Implement proper TTS model support
+        // This would require installing a TTS model like:
+        // - bark (text-to-speech)
+        // - xtts (multilingual TTS)
+        // - or similar TTS-specific models
     }
     
     private func playAudio(_ audioData: Data) {
+        // Validate audio data before attempting to play
+        guard !audioData.isEmpty else {
+            errorMessage = "No audio data received from Ollama"
+            isProcessing = false
+            return
+        }
+        
+        // Check if data looks like valid audio (basic validation)
+        guard audioData.count > 100 else {
+            errorMessage = "Audio data too small, may be invalid"
+            isProcessing = false
+            return
+        }
+        
         do {
             audioPlayer = try AVAudioPlayer(data: audioData)
+            
+            // Additional validation after creating player
+            guard audioPlayer?.duration ?? 0 > 0 else {
+                errorMessage = "Invalid audio duration, cannot play"
+                isProcessing = false
+                return
+            }
+            
             audioPlayer?.delegate = self
             audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
+            
+            // Final check before playing
+            guard audioPlayer?.play() == true else {
+                errorMessage = "Failed to start audio playback"
+                isProcessing = false
+                return
+            }
             
             isSpeaking = true
             isPaused = false
@@ -210,10 +188,14 @@ class OllamaTTSManager: NSObject, ObservableObject {
             startProgressTracking()
         } catch {
             errorMessage = "Failed to play audio: \(error.localizedDescription)"
+            isProcessing = false
         }
     }
     
     private func startProgressTracking() {
+        var timeoutCounter = 0
+        let maxTimeout = 100 // 10 seconds timeout
+        
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self = self, let player = self.audioPlayer else {
@@ -226,8 +208,30 @@ class OllamaTTSManager: NSObject, ObservableObject {
                     return
                 }
                 
+                // Check for timeout (audio stuck)
+                timeoutCounter += 1
+                if timeoutCounter > maxTimeout {
+                    print("Audio player timeout detected, stopping playback")
+                    self.stopSpeaking()
+                    self.errorMessage = "Audio playback timed out"
+                    timer.invalidate()
+                    return
+                }
+                
+                // Check for valid duration
+                guard player.duration > 0 else {
+                    print("Invalid audio duration detected, stopping playback")
+                    self.stopSpeaking()
+                    self.errorMessage = "Invalid audio duration"
+                    timer.invalidate()
+                    return
+                }
+                
                 let progress = player.currentTime / player.duration
                 self.readingProgress = Double(progress)
+                
+                // Update word index based on progress
+                self.currentWordIndex = Int(progress * Double(self.totalWords))
             }
         }
     }
@@ -247,6 +251,7 @@ class OllamaTTSManager: NSObject, ObservableObject {
         isSpeaking = false
         isPaused = false
         readingProgress = 0.0
+        currentWordIndex = 0
         currentAudioData = nil
     }
     
@@ -301,6 +306,115 @@ class OllamaTTSManager: NSObject, ObservableObject {
             }
         }.resume()
     }
+    
+    private func preprocessTextForTTS(_ text: String) -> String {
+        var processedText = text
+        
+        // Handle LaTeX math delimiters more carefully to preserve content
+        processedText = processedText.replacingOccurrences(of: "\\(", with: " (")
+        processedText = processedText.replacingOccurrences(of: "\\)", with: ") ")
+        processedText = processedText.replacingOccurrences(of: "\\[", with: " [")
+        processedText = processedText.replacingOccurrences(of: "\\]", with: "] ")
+        processedText = processedText.replacingOccurrences(of: "$$", with: " ")
+        processedText = processedText.replacingOccurrences(of: "$", with: " ")
+        
+        // Handle common LaTeX commands
+        processedText = processedText.replacingOccurrences(of: "\\frac{", with: " fraction ")
+        processedText = processedText.replacingOccurrences(of: "\\sqrt{", with: " square root of ")
+        processedText = processedText.replacingOccurrences(of: "\\sum", with: " sum ")
+        processedText = processedText.replacingOccurrences(of: "\\int", with: " integral ")
+        processedText = processedText.replacingOccurrences(of: "\\lim", with: " limit ")
+        processedText = processedText.replacingOccurrences(of: "\\infty", with: " infinity ")
+        processedText = processedText.replacingOccurrences(of: "\\alpha", with: " alpha ")
+        processedText = processedText.replacingOccurrences(of: "\\beta", with: " beta ")
+        processedText = processedText.replacingOccurrences(of: "\\gamma", with: " gamma ")
+        processedText = processedText.replacingOccurrences(of: "\\delta", with: " delta ")
+        processedText = processedText.replacingOccurrences(of: "\\epsilon", with: " epsilon ")
+        processedText = processedText.replacingOccurrences(of: "\\theta", with: " theta ")
+        processedText = processedText.replacingOccurrences(of: "\\lambda", with: " lambda ")
+        processedText = processedText.replacingOccurrences(of: "\\mu", with: " mu ")
+        processedText = processedText.replacingOccurrences(of: "\\pi", with: " pi ")
+        processedText = processedText.replacingOccurrences(of: "\\sigma", with: " sigma ")
+        processedText = processedText.replacingOccurrences(of: "\\tau", with: " tau ")
+        processedText = processedText.replacingOccurrences(of: "\\phi", with: " phi ")
+        processedText = processedText.replacingOccurrences(of: "\\omega", with: " omega ")
+        
+        // Handle mathematical operators
+        processedText = processedText.replacingOccurrences(of: "\\times", with: " times ")
+        processedText = processedText.replacingOccurrences(of: "\\div", with: " divided by ")
+        processedText = processedText.replacingOccurrences(of: "\\pm", with: " plus or minus ")
+        processedText = processedText.replacingOccurrences(of: "\\mp", with: " minus or plus ")
+        processedText = processedText.replacingOccurrences(of: "\\leq", with: " less than or equal to ")
+        processedText = processedText.replacingOccurrences(of: "\\geq", with: " greater than or equal to ")
+        processedText = processedText.replacingOccurrences(of: "\\neq", with: " not equal to ")
+        processedText = processedText.replacingOccurrences(of: "\\approx", with: " approximately equal to ")
+        processedText = processedText.replacingOccurrences(of: "\\equiv", with: " equivalent to ")
+        processedText = processedText.replacingOccurrences(of: "\\propto", with: " proportional to ")
+        processedText = processedText.replacingOccurrences(of: "\\in", with: " in ")
+        processedText = processedText.replacingOccurrences(of: "\\notin", with: " not in ")
+        processedText = processedText.replacingOccurrences(of: "\\subset", with: " subset of ")
+        processedText = processedText.replacingOccurrences(of: "\\supset", with: " superset of ")
+        processedText = processedText.replacingOccurrences(of: "\\cup", with: " union ")
+        processedText = processedText.replacingOccurrences(of: "\\cap", with: " intersection ")
+        processedText = processedText.replacingOccurrences(of: "\\emptyset", with: " empty set ")
+        processedText = processedText.replacingOccurrences(of: "\\forall", with: " for all ")
+        processedText = processedText.replacingOccurrences(of: "\\exists", with: " there exists ")
+        processedText = processedText.replacingOccurrences(of: "\\rightarrow", with: " implies ")
+        processedText = processedText.replacingOccurrences(of: "\\leftarrow", with: " implied by ")
+        processedText = processedText.replacingOccurrences(of: "\\leftrightarrow", with: " if and only if ")
+        
+        // Handle superscripts and subscripts
+        processedText = processedText.replacingOccurrences(of: "^{", with: " to the power of ")
+        processedText = processedText.replacingOccurrences(of: "_{", with: " sub ")
+        processedText = processedText.replacingOccurrences(of: "}", with: " ")
+        
+        // Handle common mathematical symbols
+        processedText = processedText.replacingOccurrences(of: "∑", with: " sum ")
+        processedText = processedText.replacingOccurrences(of: "∏", with: " product ")
+        processedText = processedText.replacingOccurrences(of: "∫", with: " integral ")
+        processedText = processedText.replacingOccurrences(of: "√", with: " square root ")
+        processedText = processedText.replacingOccurrences(of: "∞", with: " infinity ")
+        processedText = processedText.replacingOccurrences(of: "α", with: " alpha ")
+        processedText = processedText.replacingOccurrences(of: "β", with: " beta ")
+        processedText = processedText.replacingOccurrences(of: "γ", with: " gamma ")
+        processedText = processedText.replacingOccurrences(of: "δ", with: " delta ")
+        processedText = processedText.replacingOccurrences(of: "ε", with: " epsilon ")
+        processedText = processedText.replacingOccurrences(of: "θ", with: " theta ")
+        processedText = processedText.replacingOccurrences(of: "λ", with: " lambda ")
+        processedText = processedText.replacingOccurrences(of: "μ", with: " mu ")
+        processedText = processedText.replacingOccurrences(of: "π", with: " pi ")
+        processedText = processedText.replacingOccurrences(of: "σ", with: " sigma ")
+        processedText = processedText.replacingOccurrences(of: "τ", with: " tau ")
+        processedText = processedText.replacingOccurrences(of: "φ", with: " phi ")
+        processedText = processedText.replacingOccurrences(of: "ω", with: " omega ")
+        processedText = processedText.replacingOccurrences(of: "×", with: " times ")
+        processedText = processedText.replacingOccurrences(of: "÷", with: " divided by ")
+        processedText = processedText.replacingOccurrences(of: "±", with: " plus or minus ")
+        processedText = processedText.replacingOccurrences(of: "≤", with: " less than or equal to ")
+        processedText = processedText.replacingOccurrences(of: "≥", with: " greater than or equal to ")
+        processedText = processedText.replacingOccurrences(of: "≠", with: " not equal to ")
+        processedText = processedText.replacingOccurrences(of: "≈", with: " approximately equal to ")
+        processedText = processedText.replacingOccurrences(of: "≡", with: " equivalent to ")
+        processedText = processedText.replacingOccurrences(of: "∝", with: " proportional to ")
+        processedText = processedText.replacingOccurrences(of: "∈", with: " in ")
+        processedText = processedText.replacingOccurrences(of: "∉", with: " not in ")
+        processedText = processedText.replacingOccurrences(of: "⊂", with: " subset of ")
+        processedText = processedText.replacingOccurrences(of: "⊃", with: " superset of ")
+        processedText = processedText.replacingOccurrences(of: "∪", with: " union ")
+        processedText = processedText.replacingOccurrences(of: "∩", with: " intersection ")
+        processedText = processedText.replacingOccurrences(of: "∅", with: " empty set ")
+        processedText = processedText.replacingOccurrences(of: "∀", with: " for all ")
+        processedText = processedText.replacingOccurrences(of: "∃", with: " there exists ")
+        processedText = processedText.replacingOccurrences(of: "→", with: " implies ")
+        processedText = processedText.replacingOccurrences(of: "←", with: " implied by ")
+        processedText = processedText.replacingOccurrences(of: "↔", with: " if and only if ")
+        
+        // Clean up excessive whitespace but preserve word boundaries
+        processedText = processedText.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+        processedText = processedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return processedText
+    }
 }
 
 extension OllamaTTSManager: AVAudioPlayerDelegate {
@@ -309,6 +423,7 @@ extension OllamaTTSManager: AVAudioPlayerDelegate {
             isSpeaking = false
             isPaused = false
             readingProgress = 0.0
+            currentWordIndex = 0
         }
     }
     

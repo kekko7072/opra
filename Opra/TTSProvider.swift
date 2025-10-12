@@ -55,7 +55,26 @@ class TTSProviderManager: ObservableObject {
         case .system:
             systemTTSManager.speak(text)
         case .ollama:
-            ollamaTTSManager.speak(text)
+            // Check if Ollama is available and has a valid model
+            if ollamaTTSManager.isAvailable && !ollamaTTSManager.selectedModel.isEmpty {
+                ollamaTTSManager.speak(text)
+            } else {
+                // Fall back to system TTS if Ollama is not available
+                print("Ollama TTS not available, falling back to System TTS")
+                systemTTSManager.speak(text)
+            }
+        }
+    }
+    
+    func speakChunkedText(_ texts: [String], startChunk: Int = 0) {
+        switch currentProvider {
+        case .system:
+            systemTTSManager.speakChunkedText(texts, startChunk: startChunk)
+        case .ollama:
+            // For Ollama, we'll fall back to system TTS for chunked text
+            // since Ollama TTS is not fully implemented
+            print("Using System TTS for chunked text (Ollama not fully implemented)")
+            systemTTSManager.speakChunkedText(texts, startChunk: startChunk)
         }
     }
     
@@ -149,6 +168,51 @@ class TTSProviderManager: ObservableObject {
         }
     }
     
+    var currentWordIndex: Int {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.currentWordIndex
+        case .ollama:
+            return ollamaTTSManager.currentWordIndex
+        }
+    }
+    
+    var totalWords: Int {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.totalWords
+        case .ollama:
+            return ollamaTTSManager.totalWords
+        }
+    }
+    
+    var isPersonalVoiceAuthorized: Bool {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.isPersonalVoiceAuthorized
+        case .ollama:
+            return false // Ollama doesn't support personal voice
+        }
+    }
+    
+    var personalVoiceStatus: String {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.personalVoiceStatus
+        case .ollama:
+            return "Not supported"
+        }
+    }
+    
+    var enableSSML: Bool {
+        switch currentProvider {
+        case .system:
+            return systemTTSManager.enableSSML
+        case .ollama:
+            return false // Ollama doesn't support SSML
+        }
+    }
+    
     func setVoice(_ voice: AVSpeechSynthesisVoice) {
         switch currentProvider {
         case .system:
@@ -178,6 +242,40 @@ class TTSProviderManager: ObservableObject {
             // For Ollama, we could generate a short preview
             let previewText = "This is a preview of the reading speed. How does this pace sound to you?"
             ollamaTTSManager.speak(previewText)
+        }
+    }
+    
+    // MARK: - Personal Voice Support
+    
+    func requestPersonalVoiceAuthorization() {
+        switch currentProvider {
+        case .system:
+            systemTTSManager.requestPersonalVoiceAuthorization()
+        case .ollama:
+            // Ollama doesn't support personal voice
+            break
+        }
+    }
+    
+    func checkPersonalVoiceAuthorization() {
+        switch currentProvider {
+        case .system:
+            systemTTSManager.checkPersonalVoiceAuthorization()
+        case .ollama:
+            // Ollama doesn't support personal voice
+            break
+        }
+    }
+    
+    // MARK: - SSML Support
+    
+    func setSSMLEnabled(_ enabled: Bool) {
+        switch currentProvider {
+        case .system:
+            systemTTSManager.setSSMLEnabled(enabled)
+        case .ollama:
+            // Ollama doesn't support SSML
+            break
         }
     }
 }

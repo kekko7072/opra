@@ -160,6 +160,35 @@ struct SettingsView: View {
                 
                 Divider()
                 
+                // Text Processing
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Text Processing")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Chunk Size (words)")
+                                .font(.subheadline)
+                            
+                            Spacer()
+                            
+                            TextField("Chunk Size", value: $settingsManager.chunkSize, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 80)
+                                .onChange(of: settingsManager.chunkSize) { _, newValue in
+                                    settingsManager.setChunkSize(newValue)
+                                }
+                        }
+                        
+                        Text("Large texts will be split into chunks to prevent crashes. Default: 10,000 words")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Divider()
+                
                 // Preferences
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Preferences")
@@ -170,6 +199,99 @@ struct SettingsView: View {
                         .onChange(of: settingsManager.autoStartReading) { _, newValue in
                             settingsManager.setAutoStartReading(newValue)
                         }
+                }
+                
+                Divider()
+                
+                // Personal Voice & SSML Features
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Advanced Speech Features")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Personal Voice Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Personal Voice")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Spacer()
+                                
+                                if ttsProviderManager.isPersonalVoiceAuthorized {
+                                    Text("✓ Authorized")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                        .fontWeight(.medium)
+                                } else {
+                                    Button("Request Access") {
+                                        ttsProviderManager.requestPersonalVoiceAuthorization()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                            }
+                            
+                            Text("Status: \(ttsProviderManager.personalVoiceStatus)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Personal Voice allows you to use your own voice for text-to-speech. Requires microphone access permission.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Divider()
+                        
+                        // SSML Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle("SSML Markup (Advanced)", isOn: $settingsManager.enableSSML)
+                                .onChange(of: settingsManager.enableSSML) { _, newValue in
+                                    settingsManager.setSSMLEnabled(newValue)
+                                    ttsProviderManager.setSSMLEnabled(newValue)
+                                }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("SSML (Speech Synthesis Markup Language) provides advanced control over speech synthesis")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("When enabled, speech rate, pitch, and voice settings are controlled via SSML markup instead of AVSpeechUtterance properties.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.leading, 20)
+                        }
+                    }
+                }
+                
+                Divider()
+                
+                // Experimental Features
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Experimental Features")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Follow Text (Experimental)", isOn: $settingsManager.enableFollowText)
+                            .onChange(of: settingsManager.enableFollowText) { _, newValue in
+                                settingsManager.setEnableFollowText(newValue)
+                            }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("⚠️ This feature is experimental and may be buggy")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .fontWeight(.medium)
+                            
+                            Text("Highlights the currently spoken word in the text. May cause performance issues or incorrect highlighting.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.leading, 20)
+                    }
                 }
                 }
             }

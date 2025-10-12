@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app uses speech recognition to enable personal voice features for text-to-speech. Personal voice allows you to use your own voice for reading documents, providing a more personalized listening experience. The app does not store or transmit your voice data.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires microphone access to create and use personal voice features for text-to-speech. Personal voice allows you to use your own voice for reading documents. The app does not store or transmit your voice data.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app may use camera access for document scanning features. Camera access is optional and only used when you choose to scan documents.</string>
+	<key>CFBundleDisplayName</key>
+	<string>Opra</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.francescovezzani.Opra</string>
+	<key>CFBundleName</key>
+	<string>Opra</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+</dict>
+</plist>
