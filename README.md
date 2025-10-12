@@ -49,7 +49,7 @@ PDF → Extract Text → AI Speech → Audio Playback
 
 #### ✅ Notarized & Code Signed
 
-The app is **properly code-signed and notarized by Apple**, so it should open directly without any security warnings. macOS will recognize it as a trusted application from an identified developer.
+The app is **properly code-signed and notarized by Apple**, so it should open directly without any security warnings. macOS will recognize it as a trusted application from an identified developer. 
 
 ### Option 2: Build from Source
 
