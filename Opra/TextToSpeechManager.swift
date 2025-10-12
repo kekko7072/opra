@@ -134,7 +134,7 @@ import Speech
                     self.totalChunks = 0
                 }
 
-                let utterance: AVSpeechUtterance
+                var utterance: AVSpeechUtterance
                 
                 if self.enableSSML {
                     // Create SSML utterance
@@ -585,6 +585,9 @@ import Speech
     private func preprocessTextForTTS(_ text: String) -> String {
         var processedText = text
         
+        // First, aggressively clean the text to remove problematic characters
+        processedText = cleanTextForTTS(processedText)
+        
         // Handle LaTeX math delimiters more carefully to preserve content
         processedText = processedText.replacingOccurrences(of: "\\(", with: " (")
         processedText = processedText.replacingOccurrences(of: "\\)", with: ") ")
@@ -713,6 +716,37 @@ import Speech
         }
         
         return processedText
+    }
+    
+    private func cleanTextForTTS(_ text: String) -> String {
+        var cleanedText = text
+        
+        // Remove all control characters except newlines, carriage returns, and tabs
+        cleanedText = cleanedText.replacingOccurrences(of: "[\u{00}-\u{08}\u{0B}\u{0C}\u{0E}-\u{1F}\u{7F}]", with: "", options: .regularExpression)
+        
+        // Remove zero-width characters that can cause audio issues
+        cleanedText = cleanedText.replacingOccurrences(of: "[\u{200B}\u{200C}\u{200D}\u{2060}\u{FEFF}]", with: "", options: .regularExpression)
+        
+        // Remove directional formatting characters
+        cleanedText = cleanedText.replacingOccurrences(of: "[\u{202A}-\u{202E}\u{2066}-\u{2069}]", with: "", options: .regularExpression)
+        
+        // Replace problematic Unicode spaces with regular spaces
+        cleanedText = cleanedText.replacingOccurrences(of: "[\u{00A0}\u{2000}-\u{200F}\u{2028}-\u{202F}\u{205F}-\u{206F}\u{3000}]", with: " ", options: .regularExpression)
+        
+        // Remove any remaining non-printable characters (simplified approach)
+        let allowedCharacterSet = CharacterSet.alphanumerics
+            .union(CharacterSet.whitespacesAndNewlines)
+            .union(CharacterSet.punctuationCharacters)
+            .union(CharacterSet.symbols)
+        
+        cleanedText = cleanedText.components(separatedBy: allowedCharacterSet.inverted)
+            .joined(separator: " ")
+        
+        // Clean up multiple spaces and normalize whitespace
+        cleanedText = cleanedText.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+        cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return cleanedText
     }
 }
 
