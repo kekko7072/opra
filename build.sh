@@ -24,37 +24,22 @@ build_windows() {
     cd ..
 }
 
-# Function to build shared library
-build_shared() {
-    echo "Building shared library..."
-    cd shared
-    dotnet build -c Release
-    echo "Shared library build completed"
-    cd ..
-}
-
 # Main build logic
 case "${1:-all}" in
     "macos")
         build_macos
         ;;
     "windows")
-        build_shared
         build_windows
         ;;
-    "shared")
-        build_shared
-        ;;
     "all")
-        build_shared
         build_macos
         build_windows
         ;;
     *)
-        echo "Usage: $0 [macos|windows|shared|all]"
+        echo "Usage: $0 [macos|windows|all]"
         echo "  macos   - Build macOS app only"
         echo "  windows - Build Windows app only"
-        echo "  shared  - Build shared library only"
         echo "  all     - Build everything (default)"
         exit 1
         ;;

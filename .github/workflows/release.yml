@@ -26,11 +26,11 @@ jobs:
     - name: Get version from project
       id: version
       run: |
-        VERSION=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+        VERSION=$(xcodebuild -showBuildSettings -project macos/Opra.xcodeproj -target Opra | grep MARKETING_VERSION | head -1 | awk '{print $3}')
         if [ -z "$VERSION" ]; then
           VERSION="1.0.0"
         fi
-        BUILD_NUMBER=$(xcodebuild -showBuildSettings -project Opra.xcodeproj -target Opra | grep CURRENT_PROJECT_VERSION | head -1 | awk '{print $3}')
+        BUILD_NUMBER=$(xcodebuild -showBuildSettings -project macos/Opra.xcodeproj -target Opra | grep CURRENT_PROJECT_VERSION | head -1 | awk '{print $3}')
         if [ -z "$BUILD_NUMBER" ]; then
           BUILD_NUMBER="1"
         fi
@@ -111,7 +111,7 @@ jobs:
     
     - name: Build app
       run: |
-        xcodebuild -project Opra.xcodeproj \
+        xcodebuild -project macos/Opra.xcodeproj \
           -scheme Opra \
           -configuration Release \
           -derivedDataPath ./build \
@@ -251,29 +251,39 @@ jobs:
         
         ### 🚀 What's New
         
-        Automated release built from the latest main branch commit.
+        Cross-platform PDF Reader AI with automated release built from the latest main branch commit.
         
         ### 📦 Downloads
         
+        #### macOS
         - **Opra-${{ steps.version.outputs.version }}.dmg**: macOS disk image (recommended)
         - **Opra-${{ steps.version.outputs.version }}.app.zip**: Standalone app bundle
         
+        #### Windows
+        - **opra-windows**: Windows executable (self-contained)
+        
         ### 📝 Installation
         
-        #### Option 1: Using DMG (Recommended)
+        #### macOS - Option 1: Using DMG (Recommended)
         1. Download the `.dmg` file
         2. Open the downloaded `.dmg` file
         3. Drag the Opra app icon to your Applications folder
         4. Launch Opra from your Applications folder
         
-        #### Option 2: Using ZIP
+        #### macOS - Option 2: Using ZIP
         1. Download the `.app.zip` file
         2. Extract the ZIP file
         3. Move Opra.app to your Applications folder
         4. Launch Opra from your Applications folder
         
+        #### Windows
+        1. Download the `opra-windows` artifact
+        2. Extract the files
+        3. Run `Opra.exe`
+        
         ### ✅ Security & Notarization
         
+        #### macOS
         This app is **properly code-signed and notarized by Apple** using a Developer ID certificate. 
         
         You should be able to open it directly without any security warnings. The app has been verified by Apple's notarization service and is safe to run.
@@ -282,14 +292,17 @@ jobs:
         1. **Right-click** (or Control-click) on Opra.app and select **"Open"**
         2. Click **"Open"** in the dialog that appears
         
+        #### Windows
+        The Windows version is built with .NET 7.0 and includes all necessary dependencies. No additional installation required.
+        
         ### 📋 Build Information
         
         - **Version**: ${{ steps.version.outputs.version }}
         - **Build**: ${{ steps.version.outputs.build }}
         - **Commit**: ${{ github.sha }}
-        - **Code Signing**: Developer ID Application
-        - **Notarization**: Apple Notary Service
-        - **Built with**: Xcode on macOS (latest stable)
+        - **macOS Code Signing**: Developer ID Application
+        - **macOS Notarization**: Apple Notary Service
+        - **Built with**: Xcode on macOS (latest stable) + .NET 7.0 on Windows
         EOF
         
         echo "Release notes generated"
@@ -305,6 +318,7 @@ jobs:
         artifacts: |
           Opra-${{ steps.version.outputs.version }}.dmg
           Opra-${{ steps.version.outputs.version }}.app.zip
+          opra-windows
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
         artifactErrorsFailBuild: true
@@ -317,3 +331,34 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           echo "Temporary keychain deleted"
         fi
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '7.0.x'
+    
+    - name: Build Shared Library
+      run: |
+        dotnet build shared/Opra.Shared.csproj -c Release
+    
+    - name: Build Windows App
+      run: |
+        dotnet build windows/Opra.sln -c Release
+    
+    - name: Publish Windows App
+      run: |
+        dotnet publish windows/Opra/Opra.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o windows-publish
+    
+    - name: Upload Windows App
+      uses: actions/upload-artifact@v4
+      with:
+        name: opra-windows
+        path: windows-publish/
+        retention-days: 30

@@ -1,0 +1,76 @@
+name: Build Cross-Platform
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build macOS
+      run: |
+        chmod +x build.sh
+        ./build.sh macos
+    
+    - name: Upload macOS App
+      uses: actions/upload-artifact@v4
+      with:
+        name: opra-macos
+        path: macos/build/Build/Products/Release/Opra.app
+        retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '7.0.x'
+    
+    - name: Build Shared Library
+      run: |
+        dotnet build shared/Opra.Shared.csproj -c Release
+    
+    - name: Build Windows
+      run: |
+        dotnet build windows/Opra.sln -c Release
+    
+    - name: Upload Windows App
+      uses: actions/upload-artifact@v4
+      with:
+        name: opra-windows
+        path: windows/bin/Release/net7.0-windows10.0.19041.0/win-x64/
+        retention-days: 30
+
+  build-shared:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '7.0.x'
+    
+    - name: Build Shared Library
+      run: |
+        chmod +x build.sh
+        ./build.sh shared
+    
+    - name: Upload Shared Library
+      uses: actions/upload-artifact@v4
+      with:
+        name: opra-shared
+        path: shared/bin/Release/net7.0/
+        retention-days: 30
