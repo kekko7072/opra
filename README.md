@@ -113,13 +113,6 @@ Opra/
 ├── windows/               # Windows WinUI 3 application
 │   ├── Opra.sln
 │   └── Opra/
-├── shared/                # Shared business logic
-│   ├── Opra.Shared.csproj
-│   ├── PDFTextExtractor.cs
-│   └── TextToSpeech.cs
-├── shared/                # Shared C++ library
-│   ├── include/
-│   └── src/
 ├── build.sh              # Build script (macOS/Linux)
 ├── build.bat             # Build script (Windows)
 └── README.md
@@ -135,12 +128,8 @@ Opra/
 
 **Windows Development:**
 - Visual Studio 2022 or later
-- .NET 8.0 SDK
-- Windows 10 SDK
-
-**Shared Library:**
-- C++17 compatible compiler
-- CMake 3.16 or later (for C++ components)
+- .NET 7.0 SDK
+- Windows 10 SDK (10.0.19041.0 or later)
 
 ### Building
 
@@ -157,10 +146,18 @@ The project uses a unified build system that supports both platforms:
 
 ### Architecture
 
-The application is built with a modular architecture:
+The application uses platform-native implementations:
 
-1. **Shared Business Logic**: Common PDF processing and TTS functionality
-2. **Platform-Specific UI**: Native UI frameworks (SwiftUI for macOS, WinUI 3 for Windows)
-3. **Cross-Platform Libraries**: Shared C++ and C# libraries for core functionality
+1. **macOS**: SwiftUI with native PDFKit and AVFoundation
+2. **Windows**: WinUI 3 with iText7 and System.Speech
+
+### Cross-Platform Building Notes
+
+**Important:** Windows App SDK applications cannot be built on Linux/macOS using Docker due to Windows-specific build tool dependencies. 
+
+To build the Windows version:
+- Use a Windows machine or VM
+- Use GitHub Actions with a Windows runner (recommended for CI/CD)
+- Use cloud build services like Azure DevOps with Windows agents
 
 
