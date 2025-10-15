@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -33,7 +34,6 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         textToSpeech.SpeechFinished += OnSpeechFinished;
         textToSpeech.SpeechPaused += OnSpeechPaused;
         textToSpeech.SpeechResumed += OnSpeechResumed;
-        textToSpeech.ProgressChanged += OnProgressChanged;
         
         // Initialize available voices
         AvailableVoices = new ObservableCollection<TextToSpeech.Voice>(textToSpeech.GetAvailableVoices());
@@ -139,12 +139,8 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         var picker = new FileOpenPicker();
         picker.FileTypeFilter.Add(".pdf");
         
-        var window = (Application.Current as App)?.m_window;
-        if (window != null)
-        {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-        }
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
 
         var file = await picker.PickSingleFileAsync();
         if (file != null)
@@ -282,11 +278,6 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(StatusColor));
     }
 
-    private void OnProgressChanged(object? sender, (float Progress, int CurrentWord, int TotalWords) e)
-    {
-        OnPropertyChanged(nameof(Progress));
-        OnPropertyChanged(nameof(ProgressText));
-    }
 
     // INotifyPropertyChanged implementation
     public event PropertyChangedEventHandler? PropertyChanged;

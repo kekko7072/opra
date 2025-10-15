@@ -31,7 +31,6 @@ public class TextToSpeech
     public event EventHandler? SpeechFinished;
     public event EventHandler? SpeechPaused;
     public event EventHandler? SpeechResumed;
-    public event EventHandler<float>? ProgressChanged;
 
     public bool IsSpeaking => isSpeaking;
     public bool IsPaused => isPaused;
