@@ -251,7 +251,7 @@ jobs:
         
         ### 🚀 What's New
         
-        Cross-platform PDF Reader AI with automated release built from the latest main branch commit.
+        macOS PDF Reader AI with automated release built from the latest main branch commit.
         
         ### 📦 Downloads
         
@@ -259,31 +259,22 @@ jobs:
         - **Opra-${{ steps.version.outputs.version }}.dmg**: macOS disk image (recommended)
         - **Opra-${{ steps.version.outputs.version }}.app.zip**: Standalone app bundle
         
-        #### Windows
-        - **opra-windows**: Windows executable (self-contained)
-        
         ### 📝 Installation
         
-        #### macOS - Option 1: Using DMG (Recommended)
+        #### Option 1: Using DMG (Recommended)
         1. Download the `.dmg` file
         2. Open the downloaded `.dmg` file
         3. Drag the Opra app icon to your Applications folder
         4. Launch Opra from your Applications folder
         
-        #### macOS - Option 2: Using ZIP
+        #### Option 2: Using ZIP
         1. Download the `.app.zip` file
         2. Extract the ZIP file
         3. Move Opra.app to your Applications folder
         4. Launch Opra from your Applications folder
         
-        #### Windows
-        1. Download the `opra-windows` artifact
-        2. Extract the files
-        3. Run `Opra.exe`
-        
         ### ✅ Security & Notarization
         
-        #### macOS
         This app is **properly code-signed and notarized by Apple** using a Developer ID certificate. 
         
         You should be able to open it directly without any security warnings. The app has been verified by Apple's notarization service and is safe to run.
@@ -292,17 +283,14 @@ jobs:
         1. **Right-click** (or Control-click) on Opra.app and select **"Open"**
         2. Click **"Open"** in the dialog that appears
         
-        #### Windows
-        The Windows version is built with .NET 8.0 (LTS) and includes all necessary dependencies. No additional installation required.
-        
         ### 📋 Build Information
         
         - **Version**: ${{ steps.version.outputs.version }}
         - **Build**: ${{ steps.version.outputs.build }}
         - **Commit**: ${{ github.sha }}
-        - **macOS Code Signing**: Developer ID Application
-        - **macOS Notarization**: Apple Notary Service
-        - **Built with**: Xcode on macOS (latest stable) + .NET 7.0 on Windows
+        - **Code Signing**: Developer ID Application
+        - **Notarization**: Apple Notary Service
+        - **Built with**: Xcode on macOS (latest stable)
         EOF
         
         echo "Release notes generated"
@@ -318,7 +306,6 @@ jobs:
         artifacts: |
           Opra-${{ steps.version.outputs.version }}.dmg
           Opra-${{ steps.version.outputs.version }}.app.zip
-          opra-windows
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
         artifactErrorsFailBuild: true
@@ -331,34 +318,3 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           echo "Temporary keychain deleted"
         fi
-
-  build-windows:
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-    
-    - name: Install Windows App SDK workload
-      run: |
-        dotnet workload install maui-windows
-    
-    - name: Build Windows App
-      run: |
-        dotnet build windows/Opra.sln -c Release
-    
-    - name: Publish Windows App
-      run: |
-        dotnet publish windows/Opra/Opra.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true -o windows-publish
-    
-    - name: Upload Windows App
-      uses: actions/upload-artifact@v4
-      with:
-        name: opra-windows
-        path: windows-publish/
-        retention-days: 30

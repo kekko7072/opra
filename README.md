@@ -128,7 +128,7 @@ Opra/
 
 **Windows Development:**
 - Visual Studio 2022 or later
-- .NET 7.0 SDK
+- .NET 8.0 SDK
 - Windows 10 SDK (10.0.19041.0 or later)
 
 ### Building

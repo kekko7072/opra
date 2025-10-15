@@ -46,17 +46,24 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
     - name: Install Windows App SDK workload
       run: |
         dotnet workload install maui-windows
     
+    - name: Restore Windows dependencies
+      run: |
+        dotnet restore windows/Opra/Opra.csproj
+    
     - name: Build Windows
       run: |
-        dotnet build windows/Opra.sln -c Release
+        msbuild windows/Opra.sln -p:Configuration=Release -p:Platform=x64 -p:AppxPackageSigningEnabled=false -p:UapAppxPackageBuildMode=SideloadOnly
     
     - name: Upload Windows App
       uses: actions/upload-artifact@v4
       with:
         name: opra-windows
-        path: windows/Opra/bin/Release/
+        path: windows/Opra/bin/x64/Release/
         retention-days: 30
