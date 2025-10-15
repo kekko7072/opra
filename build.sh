@@ -10,7 +10,24 @@ echo "Building Opra - Cross-platform PDF Reader AI"
 build_macos() {
     echo "Building macOS app..."
     cd macos
-    xcodebuild -project Opra.xcodeproj -scheme Opra -configuration Release -derivedDataPath build
+    
+    # Check if --no-sign flag is passed
+    if [[ "$*" == *"--no-sign"* ]]; then
+        echo "Building without code signing..."
+        xcodebuild -project Opra.xcodeproj \
+            -scheme Opra \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+    else
+        echo "Building with code signing..."
+        xcodebuild -project Opra.xcodeproj -scheme Opra -configuration Release -derivedDataPath build
+    fi
+    
     echo "macOS build completed"
     cd ..
 }
@@ -37,10 +54,13 @@ case "${1:-all}" in
         build_windows
         ;;
     *)
-        echo "Usage: $0 [macos|windows|all]"
+        echo "Usage: $0 [macos|windows|all] [--no-sign]"
         echo "  macos   - Build macOS app only"
         echo "  windows - Build Windows app only"
         echo "  all     - Build everything (default)"
+        echo ""
+        echo "Options:"
+        echo "  --no-sign - Build macOS app without code signing (useful for CI/CD)"
         exit 1
         ;;
 esac

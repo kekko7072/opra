@@ -14,10 +14,6 @@ Opra/
 ├── windows/               # Windows WinUI 3 application
 │   ├── Opra.sln
 │   └── Opra/
-├── shared/                # Shared business logic
-│   ├── Opra.Shared.csproj
-│   ├── PDFTextExtractor.cs
-│   └── TextToSpeech.cs
 └── .github/workflows/     # GitHub Actions workflows
     ├── build.yml          # Cross-platform build
     └── release.yml        # Release with signing
@@ -52,10 +48,9 @@ The macOS signing process has been updated to work with the new project structur
 The Windows build process is now included in the release workflow:
 
 ### What it Does:
-1. ✅ **Builds shared library** (.NET 7.0)
-2. ✅ **Builds Windows app** (WinUI 3)
-3. ✅ **Publishes self-contained** executable
-4. ✅ **Uploads as artifact** for release
+1. ✅ **Builds Windows app** (WinUI 3 with .NET 7.0)
+2. ✅ **Publishes self-contained** executable
+3. ✅ **Uploads as artifact** for release
 
 ## 🚀 How to Use
 
@@ -69,26 +64,13 @@ The Windows build process is now included in the release workflow:
 1. **macOS**: Download `.dmg` file (signed and notarized)
 2. **Windows**: Download `opra-windows` artifact (self-contained)
 
-## 🔧 Testing the Setup
-
-Run the test script to verify everything works:
-
-```bash
-./test-signing-setup.sh
-```
-
-This will:
-- ✅ Verify Xcode project is in the right location
-- ✅ Test version extraction
-- ✅ Test build process
-- ✅ Confirm signing setup will work
 
 ## 📋 Workflow Files
 
 ### `.github/workflows/build.yml`
 - **Purpose**: Cross-platform build on every push
-- **Platforms**: macOS, Windows, Shared Library
-- **Output**: Build artifacts for testing
+- **Platforms**: macOS, Windows
+- **Output**: Build artifacts for testing (unsigned)
 
 ### `.github/workflows/release.yml`
 - **Purpose**: Full release with signing and notarization

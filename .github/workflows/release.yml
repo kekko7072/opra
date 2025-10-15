@@ -344,10 +344,6 @@ jobs:
       with:
         dotnet-version: '7.0.x'
     
-    - name: Build Shared Library
-      run: |
-        dotnet build shared/Opra.Shared.csproj -c Release
-    
     - name: Build Windows App
       run: |
         dotnet build windows/Opra.sln -c Release
