@@ -49,10 +49,6 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
     
-    - name: Install Windows App SDK workload
-      run: |
-        dotnet workload install maui-windows
-    
     - name: Restore Windows dependencies
       run: |
         dotnet restore windows/Opra/Opra.csproj
