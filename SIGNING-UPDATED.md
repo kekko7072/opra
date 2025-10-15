@@ -40,7 +40,7 @@ The macOS signing process has been updated to work with the new project structur
 2. ✅ **Code signs** with Developer ID Application certificate
 3. ✅ **Notarizes** with Apple Notary Service
 4. ✅ **Creates DMG** and ZIP files
-5. ✅ **Builds Windows app** with .NET 7.0
+5. ✅ **Builds Windows app** with .NET 8.0 (LTS)
 6. ✅ **Creates release** with both platforms
 
 ## 🪟 Windows Build (New)
@@ -48,7 +48,7 @@ The macOS signing process has been updated to work with the new project structur
 The Windows build process is now included in the release workflow:
 
 ### What it Does:
-1. ✅ **Builds Windows app** (WinUI 3 with .NET 7.0)
+1. ✅ **Builds Windows app** (WinUI 3 with .NET 8.0 LTS)
 2. ✅ **Publishes self-contained** executable
 3. ✅ **Uploads as artifact** for release
 
