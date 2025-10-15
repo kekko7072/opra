@@ -47,8 +47,20 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
     public bool HasPDF
     {
         get => hasPDF;
-        set => SetProperty(ref hasPDF, value);
+        set
+        {
+            SetProperty(ref hasPDF, value);
+            OnPropertyChanged(nameof(HasNoPDF));
+            OnPropertyChanged(nameof(HasPDFVisibility));
+            OnPropertyChanged(nameof(HasNoPDFVisibility));
+        }
     }
+
+    public bool HasNoPDF => !hasPDF;
+    
+    public Visibility HasPDFVisibility => hasPDF ? Visibility.Visible : Visibility.Collapsed;
+    
+    public Visibility HasNoPDFVisibility => !hasPDF ? Visibility.Visible : Visibility.Collapsed;
 
     public string SelectedFileName
     {
@@ -69,6 +81,8 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         : Symbol.Play;
 
     public bool IsSpeaking => textToSpeech.IsSpeaking;
+    
+    public Visibility IsSpeakingVisibility => textToSpeech.IsSpeaking ? Visibility.Visible : Visibility.Collapsed;
 
     public float SpeechRate
     {
@@ -237,6 +251,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(PlayButtonSymbol));
         OnPropertyChanged(nameof(IsSpeaking));
+        OnPropertyChanged(nameof(IsSpeakingVisibility));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusColor));
     }
@@ -245,6 +260,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(PlayButtonSymbol));
         OnPropertyChanged(nameof(IsSpeaking));
+        OnPropertyChanged(nameof(IsSpeakingVisibility));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusColor));
         OnPropertyChanged(nameof(ProgressText));

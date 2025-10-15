@@ -31,12 +31,12 @@
                 <StackPanel Grid.Column="1" 
                            Orientation="Horizontal" 
                            HorizontalAlignment="Center"
-                           Visibility="{x:Bind ViewModel.HasPDF, Mode=OneWay}">
+                           Visibility="{x:Bind HasPDFVisibility, Mode=OneWay}">
                     <SymbolIcon Symbol="Document" Foreground="Red" Margin="0,0,8,0"/>
-                    <TextBlock Text="{x:Bind ViewModel.SelectedFileName, Mode=OneWay}" 
+                    <TextBlock Text="{x:Bind SelectedFileName, Mode=OneWay}" 
                                FontWeight="SemiBold" 
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="{x:Bind ViewModel.PageCountText, Mode=OneWay}" 
+                    <TextBlock Text="{x:Bind PageCountText, Mode=OneWay}" 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                                Margin="20,0,0,0"
                                VerticalAlignment="Center"/>
@@ -44,7 +44,7 @@
 
                 <StackPanel Grid.Column="1" 
                            HorizontalAlignment="Center"
-                           Visibility="{x:Bind ViewModel.HasPDF, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                           Visibility="{x:Bind HasNoPDFVisibility, Mode=OneWay}">
                     <TextBlock Text="PDF Reader" 
                                FontWeight="SemiBold" 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -58,7 +58,7 @@
         </Border>
 
         <!-- Main Content Area -->
-        <Grid Grid.Row="1" Visibility="{x:Bind ViewModel.HasPDF, Mode=OneWay}">
+        <Grid Grid.Row="1" Visibility="{x:Bind HasPDFVisibility, Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -105,7 +105,7 @@
                     <ScrollViewer Grid.Row="1" 
                                   Padding="12"
                                   VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{x:Bind ViewModel.ExtractedText, Mode=OneWay}" 
+                        <TextBlock Text="{x:Bind ExtractedText, Mode=OneWay}" 
                                    TextWrapping="Wrap"
                                    FontFamily="Consolas"
                                    IsTextSelectionEnabled="True"/>
@@ -116,7 +116,7 @@
 
         <!-- Welcome Screen -->
         <Grid Grid.Row="1" 
-              Visibility="{x:Bind ViewModel.HasPDF, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+              Visibility="{x:Bind HasNoPDFVisibility, Mode=OneWay}">
             <StackPanel HorizontalAlignment="Center" 
                         VerticalAlignment="Center"
                         Spacing="20">
@@ -139,7 +139,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,1,0,0"
-                Visibility="{x:Bind ViewModel.HasPDF, Mode=OneWay}">
+                Visibility="{x:Bind HasPDFVisibility, Mode=OneWay}">
             <Grid Padding="20,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -157,7 +157,7 @@
                         Width="40" 
                         Height="40"
                         Margin="0,0,20,0">
-                    <SymbolIcon Symbol="{x:Bind ViewModel.PlayButtonSymbol, Mode=OneWay}"/>
+                    <SymbolIcon Symbol="{x:Bind PlayButtonSymbol, Mode=OneWay}"/>
                 </Button>
 
                 <!-- Stop Button -->
@@ -173,12 +173,12 @@
                         <TextBlock Text="Speed" 
                                    FontSize="12" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="{x:Bind ViewModel.SpeedText, Mode=OneWay}" 
+                        <TextBlock Text="{x:Bind SpeedText, Mode=OneWay}" 
                                    FontSize="12" 
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Right"/>
                     </Grid>
-                    <Slider Value="{x:Bind ViewModel.SpeechRate, Mode=TwoWay}" 
+                    <Slider Value="{x:Bind SpeechRate, Mode=TwoWay}" 
                             Minimum="0.1" 
                             Maximum="1.0" 
                             StepFrequency="0.05"
@@ -196,26 +196,26 @@
 
                 <!-- Voice Selection -->
                 <ComboBox Grid.Column="3" 
-                          ItemsSource="{x:Bind ViewModel.AvailableVoices, Mode=OneWay}"
-                          SelectedItem="{x:Bind ViewModel.SelectedVoice, Mode=TwoWay}"
+                          ItemsSource="{x:Bind AvailableVoices, Mode=OneWay}"
+                          SelectedItem="{x:Bind SelectedVoice, Mode=TwoWay}"
                           DisplayMemberPath="Name"
                           Width="200"
                           Margin="0,0,20,0"/>
 
                 <!-- Status -->
                 <TextBlock Grid.Column="4" 
-                           Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" 
+                           Text="{x:Bind StatusText, Mode=OneWay}" 
                            VerticalAlignment="Center"
-                           Foreground="{x:Bind ViewModel.StatusColor, Mode=OneWay}"/>
+                           Foreground="{x:Bind StatusColor, Mode=OneWay}"/>
 
                 <!-- Progress -->
                 <StackPanel Grid.Column="5" 
                            HorizontalAlignment="Right"
-                           Visibility="{x:Bind ViewModel.IsSpeaking, Mode=OneWay}">
-                    <ProgressBar Value="{x:Bind ViewModel.Progress, Mode=OneWay}" 
+                           Visibility="{x:Bind IsSpeakingVisibility, Mode=OneWay}">
+                    <ProgressBar Value="{x:Bind Progress, Mode=OneWay}" 
                                 Width="150" 
                                 Margin="0,0,0,4"/>
-                    <TextBlock Text="{x:Bind ViewModel.ProgressText, Mode=OneWay}" 
+                    <TextBlock Text="{x:Bind ProgressText, Mode=OneWay}" 
                                FontSize="10" 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
