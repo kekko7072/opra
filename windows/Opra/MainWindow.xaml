@@ -120,9 +120,9 @@
             <StackPanel HorizontalAlignment="Center" 
                         VerticalAlignment="Center"
                         Spacing="20">
-                <SymbolIcon Symbol="DocumentAdd" 
-                           FontSize="80" 
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <FontIcon Glyph="&#xE8A5;" 
+                          FontSize="80" 
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <TextBlock Text="Select a PDF file to begin" 
                            FontSize="24" 
                            FontWeight="SemiBold"
