@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - appcast.xml
 
 permissions:
   contents: write
@@ -309,7 +311,68 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
         artifactErrorsFailBuild: true
-    
+
+    - name: Publish Sparkle appcast
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${SPARKLE_PRIVATE_KEY:-}" ]; then
+          echo "Error: SPARKLE_PRIVATE_KEY secret is not set." >&2
+          echo "Export it from your keychain with Sparkle's generate_keys (-x) and add it as a repo secret." >&2
+          exit 1
+        fi
+
+        # Locate Sparkle's generate_appcast from the SPM artifacts fetched during the build.
+        GENERATE_APPCAST=$(find "$GITHUB_WORKSPACE/build" -path '*sparkle/Sparkle/bin/generate_appcast' 2>/dev/null | head -1)
+        if [ -z "$GENERATE_APPCAST" ]; then
+          echo "Error: generate_appcast not found under ./build SourcePackages." >&2
+          exit 1
+        fi
+        echo "Using: $GENERATE_APPCAST"
+
+        # Stage the notarized archive that the appcast will advertise.
+        ARCHIVES_DIR="$RUNNER_TEMP/sparkle-archives"
+        mkdir -p "$ARCHIVES_DIR"
+        cp "Opra-${{ steps.version.outputs.version }}.app.zip" "$ARCHIVES_DIR/"
+
+        # Provide the EdDSA private key via a temp file (never written into the repo).
+        KEY_FILE="$RUNNER_TEMP/sparkle_ed_private.key"
+        printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE"
+        trap 'rm -f "$KEY_FILE"' EXIT
+
+        # Generate the EdDSA-signed appcast; enclosure URLs point at this release's assets.
+        "$GENERATE_APPCAST" "$ARCHIVES_DIR" \
+          --ed-key-file "$KEY_FILE" \
+          --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/" \
+          -o "$RUNNER_TEMP/appcast.xml"
+
+        echo "=== Generated appcast.xml ==="
+        cat "$RUNNER_TEMP/appcast.xml"
+
+        # Attach the appcast to the GitHub release too (handy for debugging).
+        gh release upload "${{ steps.version.outputs.tag }}" "$RUNNER_TEMP/appcast.xml" --clobber
+
+    - name: Commit appcast.xml to main
+      run: |
+        set -euo pipefail
+        git config user.name  "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git fetch origin main
+        git checkout -B main origin/main
+        cp "$RUNNER_TEMP/appcast.xml" appcast.xml
+        git add appcast.xml
+        if git diff --cached --quiet; then
+          echo "Appcast unchanged; nothing to commit."
+        else
+          # GITHUB_TOKEN pushes do not retrigger workflows; [skip ci] is belt-and-suspenders.
+          git commit -m "Publish Sparkle appcast for ${{ steps.version.outputs.tag }} [skip ci]"
+          git push origin HEAD:main
+          echo "Committed appcast.xml to main — now served at the SUFeedURL."
+        fi
+
     - name: Cleanup
       if: always()
       run: |
