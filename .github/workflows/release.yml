@@ -138,7 +138,6 @@ jobs:
           -derivedDataPath ./build \
           CODE_SIGN_STYLE=Manual \
           CODE_SIGN_IDENTITY="$IDENTITY" \
-          "CODE_SIGN_IDENTITY[sdk=macosx*]=$IDENTITY" \
           DEVELOPMENT_TEAM=P8WULW25UZ \
           ENABLE_HARDENED_RUNTIME=YES \
           OTHER_CODE_SIGN_FLAGS="--timestamp" \
