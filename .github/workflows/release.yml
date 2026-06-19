@@ -111,16 +111,37 @@ jobs:
         
         echo "Certificate imported successfully"
     
-    - name: Build app
+    - name: Build and sign app
       run: |
+        set -euo pipefail
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+        # Resolve the Developer ID Application identity from the signing keychain.
+        IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+          | grep "Developer ID Application" | head -1 | grep -o '"[^"]*"' | tr -d '"')
+        if [ -z "$IDENTITY" ]; then
+          echo "Error: No Developer ID Application certificate found in keychain"
+          exit 1
+        fi
+        echo "Signing identity: $IDENTITY"
+
+        # Build Release and let Xcode code-sign the whole bundle in ONE pass:
+        #   * the main app with hardened runtime + its real entitlements
+        #     (app-sandbox + the Sparkle mach-lookup exceptions ...-spks / ...-spki), and
+        #   * Sparkle.framework with its nested XPC services/helpers signed inside-out.
+        # Hand-rolled `codesign --deep` cannot do this correctly: it drops the entitlements
+        # (breaking the sandboxed installer XPC, so "Install and Relaunch" can't quit the app)
+        # and mis-signs Sparkle's nested code. Both contributed to "Opra.app is damaged".
         xcodebuild -project macos/Opra.xcodeproj \
           -scheme Opra \
           -configuration Release \
           -derivedDataPath ./build \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGN_ENTITLEMENTS="" \
-          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGN_STYLE=Manual \
+          CODE_SIGN_IDENTITY="$IDENTITY" \
+          "CODE_SIGN_IDENTITY[sdk=macosx*]=$IDENTITY" \
+          DEVELOPMENT_TEAM=P8WULW25UZ \
+          ENABLE_HARDENED_RUNTIME=YES \
+          OTHER_CODE_SIGN_FLAGS="--timestamp" \
           clean build
     
     - name: Verify build output
@@ -133,36 +154,25 @@ jobs:
         fi
         echo "Build successful!"
     
-    - name: Code Sign Application
+    - name: Verify code signature
       run: |
-        # Set keychain to use
-        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-        
-        echo "Listing available identities..."
-        security find-identity -v -p codesigning $KEYCHAIN_PATH
-        
-        echo "Signing application..."
-        # Find the Developer ID Application identity
-        IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -1 | grep -o '".*"' | tr -d '"')
-        
-        if [ -z "$IDENTITY" ]; then
-          echo "Error: No Developer ID Application certificate found"
-          exit 1
-        fi
-        
-        echo "Using identity: $IDENTITY"
-        
-        codesign --force --deep --sign "$IDENTITY" \
-          --options runtime \
-          --timestamp \
-          --keychain $KEYCHAIN_PATH \
-          ./build/Build/Products/Release/Opra.app
-        
-        echo "Verifying signature..."
-        codesign --verify --verbose ./build/Build/Products/Release/Opra.app
-        codesign -dv --verbose=4 ./build/Build/Products/Release/Opra.app
-        
-        echo "Code signing completed successfully"
+        set -euo pipefail
+        APP=./build/Build/Products/Release/Opra.app
+
+        echo "== Strict signature verification (whole bundle, inside-out) =="
+        codesign --verify --deep --strict --verbose=2 "$APP"
+
+        echo "== Sparkle.framework signature =="
+        codesign --verify --strict --verbose=2 "$APP/Contents/Frameworks/Sparkle.framework"
+
+        echo "== Main app signing info =="
+        codesign -dv --verbose=4 "$APP" 2>&1 | grep -E 'Identifier|Authority|TeamIdentifier|flags|Runtime' || true
+
+        echo "== Entitlements (must list app-sandbox + ...-spks / ...-spki mach-lookup) =="
+        codesign -d --entitlements :- "$APP" 2>/dev/null || true
+
+        echo "== Gatekeeper assessment (passes only after notarization + staple) =="
+        spctl -a -vvv --type execute "$APP" || echo "(expected to fail here; re-checked after stapling)"
     
     - name: Create DMG
       run: |
@@ -220,9 +230,9 @@ jobs:
         APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        echo "Creating ZIP for notarization..."
+        echo "Creating ZIP for notarization (ditto preserves symlinks + signatures)..."
         cd ./build/Build/Products/Release/
-        zip -r temp-app.zip Opra.app
+        /usr/bin/ditto -c -k --keepParent Opra.app temp-app.zip
         
         echo "Submitting app ZIP for notarization..."
         xcrun notarytool submit temp-app.zip \
@@ -237,9 +247,11 @@ jobs:
         echo "Verifying staple..."
         xcrun stapler validate Opra.app
         
-        echo "Creating final ZIP..."
+        echo "Creating final ZIP (ditto — this is the archive Sparkle downloads & extracts)..."
         rm temp-app.zip
-        zip -r $GITHUB_WORKSPACE/Opra-${{ steps.version.outputs.version }}.app.zip Opra.app
+        # MUST be ditto, not `zip -r`: plain zip mangles the symlinks inside Sparkle.framework,
+        # which invalidates the signature on extraction → "Opra.app is damaged and can't be opened".
+        /usr/bin/ditto -c -k --keepParent Opra.app "$GITHUB_WORKSPACE/Opra-${{ steps.version.outputs.version }}.app.zip"
         
         cd $GITHUB_WORKSPACE
         echo "ZIP created successfully"
