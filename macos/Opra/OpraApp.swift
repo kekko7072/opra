@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct OpraApp: App {
@@ -13,7 +14,13 @@ struct OpraApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [LibraryDocument.self, LibraryFolder.self])
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { UpdaterController.shared.checkForUpdates() }
+            }
+        }
     }
 }

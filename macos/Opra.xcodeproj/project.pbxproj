@@ -14,9 +14,30 @@
 		A1234567890ABCDEF123456E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456D /* Preview Assets.xcassets */; };
 		A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456F /* PDFTextExtractor.swift */; };
 		A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */; };
-		BF12B9402E9BE456006C1D92 /* OllamaTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */; };
 		BF12B9422E9BE461006C1D92 /* TTSProviderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */; };
-		BF3C9B372E9BF97700E3DD44 /* OllamaSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B362E9BF97700E3DD44 /* OllamaSetupView.swift */; };
+		FE11110000000000000000A2 /* TTSEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE11110000000000000000A1 /* TTSEngine.swift */; };
+		FE22220000000000000000B2 /* AudioPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE22220000000000000000B1 /* AudioPlaybackController.swift */; };
+		FE33330000000000000000C2 /* LibraryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE33330000000000000000C1 /* LibraryDocument.swift */; };
+		FEF4440000000000000000A2 /* LibraryFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF4440000000000000000A1 /* LibraryFolder.swift */; };
+		FE44440000000000000000D2 /* DocumentImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE44440000000000000000D1 /* DocumentImporter.swift */; };
+		FE55550000000000000000E2 /* Passage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE55550000000000000000E1 /* Passage.swift */; };
+		FE66660000000000000000F2 /* PassageSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE66660000000000000000F1 /* PassageSegmenter.swift */; };
+		FE77770000000000000000A2 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE77770000000000000000A1 /* ReaderViewModel.swift */; };
+		FECCCC0000000000000000A2 /* UpdaterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FECCCC0000000000000000A1 /* UpdaterController.swift */; };
+		FEF1110000000000000000A2 /* AudioWAV.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF1110000000000000000A1 /* AudioWAV.swift */; };
+		FEF2220000000000000000A2 /* KokoroModelInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF2220000000000000000A1 /* KokoroModelInstaller.swift */; };
+		FEF3330000000000000000A2 /* KokoroTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF3330000000000000000A1 /* KokoroTTSManager.swift */; };
+		FEF5550000000000000000A2 /* OpraTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF5550000000000000000A1 /* OpraTips.swift */; };
+		FEF6660000000000000000A2 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF6660000000000000000A1 /* OnboardingView.swift */; };
+		FEE0000000000000000000A2 /* KokoroSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000A1 /* KokoroSwift */; };
+		FEE0000000000000000000B2 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000B1 /* MLX */; };
+		FEE0000000000000000000C2 /* MLXUtilsLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000C1 /* MLXUtilsLibrary */; };
+		FEE0000000000000000000D2 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000D1 /* Sparkle */; };
+		FE88880000000000000000A2 /* LibrarySidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE88880000000000000000A1 /* LibrarySidebarView.swift */; };
+		FE99990000000000000000A2 /* ReadingScriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE99990000000000000000A1 /* ReadingScriptView.swift */; };
+		FEAAAA0000000000000000A2 /* TransportBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEAAAA0000000000000000A1 /* TransportBarView.swift */; };
+		FEBBBB0000000000000000A2 /* ReaderPaneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEBBBB0000000000000000A1 /* ReaderPaneView.swift */; };
+		BF2A6E012EAB100000000001 /* OpenAITTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2A6E002EAB100000000001 /* OpenAITTSManager.swift */; };
 		BF3C9B392E9BF98700E3DD44 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B382E9BF98700E3DD44 /* SettingsView.swift */; };
 		BF3C9B3B2E9BF9C000E3DD44 /* PDFViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B3A2E9BF9C000E3DD44 /* PDFViewerView.swift */; };
 		BF3C9B3D2E9BF9D200E3DD44 /* PDFViewRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3C9B3C2E9BF9D200E3DD44 /* PDFViewRepresentable.swift */; };
@@ -35,9 +56,26 @@
 		A1234567890ABCDEF123456D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890ABCDEF123456F /* PDFTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractor.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextToSpeechManager.swift; sourceTree = "<group>"; };
-		BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTTSManager.swift; sourceTree = "<group>"; };
 		BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSProviderManager.swift; sourceTree = "<group>"; };
-		BF3C9B362E9BF97700E3DD44 /* OllamaSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSetupView.swift; sourceTree = "<group>"; };
+		FE11110000000000000000A1 /* TTSEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSEngine.swift; sourceTree = "<group>"; };
+		FE22220000000000000000B1 /* AudioPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackController.swift; sourceTree = "<group>"; };
+		FE33330000000000000000C1 /* LibraryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryDocument.swift; sourceTree = "<group>"; };
+		FEF4440000000000000000A1 /* LibraryFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryFolder.swift; sourceTree = "<group>"; };
+		FE44440000000000000000D1 /* DocumentImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImporter.swift; sourceTree = "<group>"; };
+		FE55550000000000000000E1 /* Passage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Passage.swift; sourceTree = "<group>"; };
+		FE66660000000000000000F1 /* PassageSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassageSegmenter.swift; sourceTree = "<group>"; };
+		FE77770000000000000000A1 /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
+		FECCCC0000000000000000A1 /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
+		FEF1110000000000000000A1 /* AudioWAV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioWAV.swift; sourceTree = "<group>"; };
+		FEF2220000000000000000A1 /* KokoroModelInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KokoroModelInstaller.swift; sourceTree = "<group>"; };
+		FEF3330000000000000000A1 /* KokoroTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KokoroTTSManager.swift; sourceTree = "<group>"; };
+		FEF5550000000000000000A1 /* OpraTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpraTips.swift; sourceTree = "<group>"; };
+		FEF6660000000000000000A1 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		FE88880000000000000000A1 /* LibrarySidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySidebarView.swift; sourceTree = "<group>"; };
+		FE99990000000000000000A1 /* ReadingScriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingScriptView.swift; sourceTree = "<group>"; };
+		FEAAAA0000000000000000A1 /* TransportBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportBarView.swift; sourceTree = "<group>"; };
+		FEBBBB0000000000000000A1 /* ReaderPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderPaneView.swift; sourceTree = "<group>"; };
+		BF2A6E002EAB100000000001 /* OpenAITTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAITTSManager.swift; sourceTree = "<group>"; };
 		BF3C9B382E9BF98700E3DD44 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BF3C9B3A2E9BF9C000E3DD44 /* PDFViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewerView.swift; sourceTree = "<group>"; };
 		BF3C9B3C2E9BF9D200E3DD44 /* PDFViewRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewRepresentable.swift; sourceTree = "<group>"; };
@@ -53,6 +91,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEE0000000000000000000A2 /* KokoroSwift in Frameworks */,
+				FEE0000000000000000000B2 /* MLX in Frameworks */,
+				FEE0000000000000000000C2 /* MLXUtilsLibrary in Frameworks */,
+				FEE0000000000000000000D2 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,10 +118,23 @@
 				A1234567890ABCDEF1234566 /* OpraApp.swift */,
 				A1234567890ABCDEF1234568 /* ContentView.swift */,
 				BF3C9B352E9BF95900E3DD44 /* Views */,
-				BF12B93F2E9BE456006C1D92 /* OllamaTTSManager.swift */,
+				BF2A6E002EAB100000000001 /* OpenAITTSManager.swift */,
 				A1234567890ABCDEF123456F /* PDFTextExtractor.swift */,
 				A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */,
 				BF12B9412E9BE461006C1D92 /* TTSProviderManager.swift */,
+				FE11110000000000000000A1 /* TTSEngine.swift */,
+				FE22220000000000000000B1 /* AudioPlaybackController.swift */,
+				FE33330000000000000000C1 /* LibraryDocument.swift */,
+				FEF4440000000000000000A1 /* LibraryFolder.swift */,
+				FE44440000000000000000D1 /* DocumentImporter.swift */,
+				FE55550000000000000000E1 /* Passage.swift */,
+				FE66660000000000000000F1 /* PassageSegmenter.swift */,
+				FE77770000000000000000A1 /* ReaderViewModel.swift */,
+				FECCCC0000000000000000A1 /* UpdaterController.swift */,
+				FEF1110000000000000000A1 /* AudioWAV.swift */,
+				FEF2220000000000000000A1 /* KokoroModelInstaller.swift */,
+				FEF3330000000000000000A1 /* KokoroTTSManager.swift */,
+				FEF5550000000000000000A1 /* OpraTips.swift */,
 				BFEB1A492E9BDD1300FBE98D /* SettingsManager.swift */,
 				BF3C9B3C2E9BF9D200E3DD44 /* PDFViewRepresentable.swift */,
 				BFEB1A4B2E9BDD2800FBE98D /* Opra.entitlements */,
@@ -109,7 +164,11 @@
 			isa = PBXGroup;
 			children = (
 				BF3C9B382E9BF98700E3DD44 /* SettingsView.swift */,
-				BF3C9B362E9BF97700E3DD44 /* OllamaSetupView.swift */,
+				FE88880000000000000000A1 /* LibrarySidebarView.swift */,
+				FE99990000000000000000A1 /* ReadingScriptView.swift */,
+				FEAAAA0000000000000000A1 /* TransportBarView.swift */,
+				FEBBBB0000000000000000A1 /* ReaderPaneView.swift */,
+				FEF6660000000000000000A1 /* OnboardingView.swift */,
 				BF3C9B3A2E9BF9C000E3DD44 /* PDFViewerView.swift */,
 				BF3C9B3E2E9BF9DD00E3DD44 /* VoicePickerView.swift */,
 			);
@@ -132,6 +191,12 @@
 			dependencies = (
 			);
 			name = Opra;
+			packageProductDependencies = (
+				FEE0000000000000000000A1 /* KokoroSwift */,
+				FEE0000000000000000000B1 /* MLX */,
+				FEE0000000000000000000C1 /* MLXUtilsLibrary */,
+				FEE0000000000000000000D1 /* Sparkle */,
+			);
 			productName = Opra;
 			productReference = A1234567890ABCDEF1234563 /* Opra.app */;
 			productType = "com.apple.product-type.application";
@@ -160,6 +225,12 @@
 				Base,
 			);
 			mainGroup = A1234567890ABCDEF1234559;
+			packageReferences = (
+				FED0000000000000000000A1 /* XCRemoteSwiftPackageReference "kokoro-ios" */,
+				FED0000000000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				FED0000000000000000000B1 /* XCRemoteSwiftPackageReference "mlx-swift" */,
+				FED0000000000000000000B2 /* XCRemoteSwiftPackageReference "MLXUtilsLibrary" */,
+			);
 			productRefGroup = A1234567890ABCDEF1234562 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -191,13 +262,30 @@
 			files = (
 				A1234567890ABCDEF1234569 /* ContentView.swift in Sources */,
 				BF3C9B3B2E9BF9C000E3DD44 /* PDFViewerView.swift in Sources */,
-				BF12B9402E9BE456006C1D92 /* OllamaTTSManager.swift in Sources */,
-				BF3C9B372E9BF97700E3DD44 /* OllamaSetupView.swift in Sources */,
 				BF3C9B392E9BF98700E3DD44 /* SettingsView.swift in Sources */,
 				BFEB1A4A2E9BDD1300FBE98D /* SettingsManager.swift in Sources */,
 				A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */,
+				BF2A6E012EAB100000000001 /* OpenAITTSManager.swift in Sources */,
 				BF3C9B3F2E9BF9DD00E3DD44 /* VoicePickerView.swift in Sources */,
 				BF12B9422E9BE461006C1D92 /* TTSProviderManager.swift in Sources */,
+				FE11110000000000000000A2 /* TTSEngine.swift in Sources */,
+				FE22220000000000000000B2 /* AudioPlaybackController.swift in Sources */,
+				FE33330000000000000000C2 /* LibraryDocument.swift in Sources */,
+				FEF4440000000000000000A2 /* LibraryFolder.swift in Sources */,
+				FE44440000000000000000D2 /* DocumentImporter.swift in Sources */,
+				FE55550000000000000000E2 /* Passage.swift in Sources */,
+				FE66660000000000000000F2 /* PassageSegmenter.swift in Sources */,
+				FE77770000000000000000A2 /* ReaderViewModel.swift in Sources */,
+				FECCCC0000000000000000A2 /* UpdaterController.swift in Sources */,
+				FEF1110000000000000000A2 /* AudioWAV.swift in Sources */,
+				FEF2220000000000000000A2 /* KokoroModelInstaller.swift in Sources */,
+				FEF3330000000000000000A2 /* KokoroTTSManager.swift in Sources */,
+				FEF5550000000000000000A2 /* OpraTips.swift in Sources */,
+				FEF6660000000000000000A2 /* OnboardingView.swift in Sources */,
+				FE88880000000000000000A2 /* LibrarySidebarView.swift in Sources */,
+				FE99990000000000000000A2 /* ReadingScriptView.swift in Sources */,
+				FEAAAA0000000000000000A2 /* TransportBarView.swift in Sources */,
+				FEBBBB0000000000000000A2 /* ReaderPaneView.swift in Sources */,
 				A1234567890ABCDEF1234572 /* TextToSpeechManager.swift in Sources */,
 				BF3C9B3D2E9BF9D200E3DD44 /* PDFViewRepresentable.swift in Sources */,
 				A1234567890ABCDEF1234567 /* OpraApp.swift in Sources */,
@@ -260,7 +348,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -317,7 +405,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -360,7 +448,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
+				PRODUCT_BUNDLE_IDENTIFIER = francesco.vezzani.opra;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -402,7 +490,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.opra.pdfreader;
+				PRODUCT_BUNDLE_IDENTIFIER = francesco.vezzani.opra;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -431,6 +519,64 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FED0000000000000000000A1 /* XCRemoteSwiftPackageReference "kokoro-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mlalma/kokoro-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		FED0000000000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		FED0000000000000000000B1 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 0.30.2;
+			};
+		};
+		FED0000000000000000000B2 /* XCRemoteSwiftPackageReference "MLXUtilsLibrary" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mlalma/MLXUtilsLibrary.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.0.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FEE0000000000000000000A1 /* KokoroSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FED0000000000000000000A1 /* XCRemoteSwiftPackageReference "kokoro-ios" */;
+			productName = KokoroSwift;
+		};
+		FEE0000000000000000000B1 /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FED0000000000000000000B1 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
+		};
+		FEE0000000000000000000C1 /* MLXUtilsLibrary */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FED0000000000000000000B2 /* XCRemoteSwiftPackageReference "MLXUtilsLibrary" */;
+			productName = MLXUtilsLibrary;
+		};
+		FEE0000000000000000000D1 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FED0000000000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1234567890ABCDEF123455B /* Project object */;
 }

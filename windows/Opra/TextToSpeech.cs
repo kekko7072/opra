@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Speech.Synthesis;
+using System.Text.RegularExpressions;
 
 namespace Opra;
 
@@ -13,6 +14,10 @@ public class TextToSpeech
     private float progress = 0;
     private int currentWordIndex = 0;
     private int totalWords = 0;
+    private string currentText = string.Empty;
+    private int currentTextLength = 1;
+    private Prompt? currentPrompt;
+    private static readonly Regex WordRegex = new(@"\S+", RegexOptions.Compiled);
 
     public class Voice
     {
@@ -31,6 +36,7 @@ public class TextToSpeech
     public event EventHandler? SpeechFinished;
     public event EventHandler? SpeechPaused;
     public event EventHandler? SpeechResumed;
+    public event EventHandler? ProgressChanged;
 
     public bool IsSpeaking => isSpeaking;
     public bool IsPaused => isPaused;
@@ -61,13 +67,34 @@ public class TextToSpeech
             isSpeaking = true;
             SpeechStarted?.Invoke(this, EventArgs.Empty);
         };
+
+        synthesizer.SpeakProgress += (s, e) =>
+        {
+            if (currentPrompt != null && e.Prompt != currentPrompt)
+            {
+                return;
+            }
+
+            var characterEnd = Math.Min(currentTextLength, e.CharacterPosition + e.CharacterCount);
+            progress = Math.Clamp(characterEnd / (float)currentTextLength, 0f, 1f);
+
+            var wordsBefore = CountWordsBefore(currentText, e.CharacterPosition);
+            currentWordIndex = Math.Min(totalWords, wordsBefore + 1);
+            ProgressChanged?.Invoke(this, EventArgs.Empty);
+        };
         
         synthesizer.SpeakCompleted += (s, e) =>
         {
+            if (currentPrompt != null && e.Prompt != currentPrompt)
+            {
+                return;
+            }
+
+            currentPrompt = null;
             isSpeaking = false;
             isPaused = false;
-            progress = 0;
-            currentWordIndex = 0;
+            progress = e.Cancelled ? 0 : 1;
+            currentWordIndex = e.Cancelled ? 0 : totalWords;
             SpeechFinished?.Invoke(this, EventArgs.Empty);
         };
     }
@@ -113,14 +140,16 @@ public class TextToSpeech
             Stop();
         }
 
-        totalWords = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        currentText = NormalizeText(text);
+        currentTextLength = Math.Max(1, currentText.Length);
+        totalWords = WordRegex.Matches(currentText).Count;
         currentWordIndex = 0;
         progress = 0;
 
         isSpeaking = true;
         isPaused = false;
         
-        synthesizer.SpeakAsync(text);
+        currentPrompt = synthesizer.SpeakAsync(currentText);
     }
 
     public void Pause()
@@ -148,6 +177,7 @@ public class TextToSpeech
         if (isSpeaking)
         {
             synthesizer.SpeakAsyncCancelAll();
+            currentPrompt = null;
             isSpeaking = false;
             isPaused = false;
             progress = 0;
@@ -155,5 +185,20 @@ public class TextToSpeech
             SpeechFinished?.Invoke(this, EventArgs.Empty);
         }
     }
-}
 
+    private static string NormalizeText(string text)
+    {
+        return Regex.Replace(text, @"\s+", " ").Trim();
+    }
+
+    private static int CountWordsBefore(string text, int characterPosition)
+    {
+        if (characterPosition <= 0)
+        {
+            return 0;
+        }
+
+        var safePosition = Math.Min(characterPosition, text.Length);
+        return WordRegex.Matches(text[..safePosition]).Count;
+    }
+}

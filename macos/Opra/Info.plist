@@ -11,7 +11,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Opra</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.francescovezzani.Opra</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
 	<string>Opra</string>
 	<key>CFBundleVersion</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
+	<string>15.0</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSMainNibFile</key>
@@ -28,5 +28,11 @@
 	<true/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/kekko7072/Opra/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>+rS6QvXnn4JvhWg5p7elnDdB7wNqZ9Mp8Y5qZUuOF6U=</string>
 </dict>
 </plist>

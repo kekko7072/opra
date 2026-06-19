@@ -34,6 +34,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         textToSpeech.SpeechFinished += OnSpeechFinished;
         textToSpeech.SpeechPaused += OnSpeechPaused;
         textToSpeech.SpeechResumed += OnSpeechResumed;
+        textToSpeech.ProgressChanged += OnSpeechProgressChanged;
         
         // Initialize available voices
         AvailableVoices = new ObservableCollection<TextToSpeech.Voice>(textToSpeech.GetAvailableVoices());
@@ -259,6 +260,7 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsSpeakingVisibility));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(Progress));
         OnPropertyChanged(nameof(ProgressText));
     }
 
@@ -276,6 +278,12 @@ public sealed partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsSpeaking));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusColor));
+    }
+
+    private void OnSpeechProgressChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(Progress));
+        OnPropertyChanged(nameof(ProgressText));
     }
 
 

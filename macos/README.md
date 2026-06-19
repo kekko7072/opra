@@ -34,13 +34,39 @@ PDF → Extract Text → AI Speech → Audio Playback
 ## Key Features
 
 - **Cross-Platform**: Works on both macOS and Windows
-- **AI-Powered Voices**: High-quality text-to-speech
+- **AI-Powered Voices**: System voices plus API-backed OpenAI voices on macOS
 - **Page Selection**: Read specific pages or entire document
 - **Speed Control**: Adjust reading speed
 - **Progress Tracking**: See current reading position
 - **Keyboard Shortcuts**: 
   - macOS: ⌘O (open), Space (play/pause), ⌘S (stop)
   - Windows: Ctrl+O (open), Space (play/pause), Ctrl+S (stop)
+
+## Voice Quality Options
+
+### Recommended API setup
+
+For the highest-quality voices, macOS builds can use OpenAI Text-to-Speech from Settings:
+
+- Model: `gpt-4o-mini-tts`
+- Best built-in voices: `marin` or `cedar`
+- Other voices: `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`, `verse`
+- Fallback models: `tts-1-hd` for quality, `tts-1` for lower latency
+
+The app stores the OpenAI API key in the macOS Keychain and splits long PDFs into smaller speech requests.
+
+### Local model direction
+
+Ollama text models are not TTS engines, so the previous Ollama option was not a reliable voice path. Good local TTS candidates to integrate behind a local HTTP service are:
+
+- `Kokoro-82M`: lightweight Apache-2.0 open-weight TTS, good default local candidate.
+- `Chatterbox Multilingual V3`: expressive multilingual/voice-cloning TTS, heavier than Kokoro.
+- `XTTS-v2`: multilingual voice cloning, useful when speaker cloning matters; check its license before commercial use.
+- `Piper`: fast CPU-friendly local TTS; useful for offline reliability, but its original repository is archived and development moved.
+
+### Speech-to-text note
+
+Opra is currently a text-to-speech PDF reader. If speech-to-text is added later, use OpenAI `gpt-4o-transcribe` for higher quality, `gpt-4o-mini-transcribe` for lower cost/latency, or `gpt-4o-transcribe-diarize` when speaker labels are required. For fully local transcription, prefer WhisperKit on Apple platforms or whisper.cpp for broad local CPU/GPU support.
 
 ## Requirements
 
@@ -162,5 +188,4 @@ The application is built with a modular architecture:
 1. **Shared Business Logic**: Common PDF processing and TTS functionality
 2. **Platform-Specific UI**: Native UI frameworks (SwiftUI for macOS, WinUI 3 for Windows)
 3. **Cross-Platform Libraries**: Shared C++ and C# libraries for core functionality
-
 
