@@ -111,7 +111,7 @@ jobs:
         
         echo "Certificate imported successfully"
     
-    - name: Build and sign app
+    - name: Archive and export (Developer ID)
       run: |
         set -euo pipefail
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -125,23 +125,56 @@ jobs:
         fi
         echo "Signing identity: $IDENTITY"
 
-        # Build Release and let Xcode code-sign the whole bundle in ONE pass:
-        #   * the main app with hardened runtime + its real entitlements
-        #     (app-sandbox + the Sparkle mach-lookup exceptions ...-spks / ...-spki), and
-        #   * Sparkle.framework with its nested XPC services/helpers signed inside-out.
-        # Hand-rolled `codesign --deep` cannot do this correctly: it drops the entitlements
-        # (breaking the sandboxed installer XPC, so "Install and Relaunch" can't quit the app)
-        # and mis-signs Sparkle's nested code. Both contributed to "Opra.app is damaged".
+        ARCHIVE="$RUNNER_TEMP/Opra.xcarchive"
+
+        # Use `archive` + `exportArchive`, NOT `build`. `archive` produces DISTRIBUTION
+        # signing — no `get-task-allow` debug entitlement, which is what made the notary
+        # service return "Invalid". Xcode signs the whole bundle inside-out, including
+        # Sparkle.framework and its nested XPC services/helpers, with hardened runtime,
+        # a secure timestamp, and the app's real entitlements (app-sandbox + the Sparkle
+        # mach-lookup exceptions ...-spks / ...-spki). This mirrors the working local
+        # macos/release.sh. (Hand-rolled `codesign --deep` cannot do this correctly: it
+        # drops entitlements — breaking the sandboxed installer XPC so "Install and
+        # Relaunch" can't quit the app — and mis-signs Sparkle's nested code.)
         xcodebuild -project macos/Opra.xcodeproj \
           -scheme Opra \
           -configuration Release \
+          -destination 'generic/platform=macOS' \
+          -archivePath "$ARCHIVE" \
           -derivedDataPath ./build \
+          archive \
           CODE_SIGN_STYLE=Manual \
           CODE_SIGN_IDENTITY="$IDENTITY" \
           DEVELOPMENT_TEAM=P8WULW25UZ \
-          ENABLE_HARDENED_RUNTIME=YES \
-          OTHER_CODE_SIGN_FLAGS="--timestamp" \
-          clean build
+          OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime"
+
+        # Export the signed, distribution-ready .app via developer-id.
+        EXPORT_OPTIONS="$RUNNER_TEMP/ExportOptions-developerid.plist"
+        cat > "$EXPORT_OPTIONS" <<'PLIST'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>method</key><string>developer-id</string>
+          <key>teamID</key><string>P8WULW25UZ</string>
+          <key>signingStyle</key><string>manual</string>
+        </dict>
+        </plist>
+        PLIST
+
+        EXPORT_DIR="$RUNNER_TEMP/export"
+        rm -rf "$EXPORT_DIR"
+        xcodebuild -exportArchive \
+          -archivePath "$ARCHIVE" \
+          -exportPath "$EXPORT_DIR" \
+          -exportOptionsPlist "$EXPORT_OPTIONS"
+
+        # Stage the exported app where the rest of the workflow expects it.
+        DEST=./build/Build/Products/Release
+        mkdir -p "$DEST"
+        rm -rf "$DEST/Opra.app"
+        /usr/bin/ditto "$EXPORT_DIR/Opra.app" "$DEST/Opra.app"
+        echo "Exported app staged at $DEST/Opra.app"
     
     - name: Verify build output
       run: |
@@ -202,16 +235,23 @@ jobs:
         APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
+        set -uo pipefail
         echo "Submitting DMG for notarization..."
-        
-        # Submit for notarization
+        SUBMIT_OUT="$RUNNER_TEMP/notarize-dmg.txt"
         xcrun notarytool submit Opra-${{ steps.version.outputs.version }}.dmg \
           --apple-id "$APPLE_ID" \
           --password "$APPLE_ID_PASSWORD" \
           --team-id "$APPLE_TEAM_ID" \
-          --wait
-        
-        echo "Notarization completed"
+          --wait 2>&1 | tee "$SUBMIT_OUT" || true
+
+        SUBMISSION_ID=$(grep -m1 -E '^[[:space:]]*id:' "$SUBMIT_OUT" | awk '{print $2}')
+        if ! grep -q 'status: Accepted' "$SUBMIT_OUT"; then
+          echo "::error::DMG notarization was not Accepted. Apple's notary log:"
+          xcrun notarytool log "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" --team-id "$APPLE_TEAM_ID" || true
+          exit 1
+        fi
+        echo "Notarization Accepted (submission $SUBMISSION_ID)"
     
     - name: Staple DMG
       run: |
@@ -229,17 +269,28 @@ jobs:
         APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
+        set -uo pipefail
         echo "Creating ZIP for notarization (ditto preserves symlinks + signatures)..."
         cd ./build/Build/Products/Release/
         /usr/bin/ditto -c -k --keepParent Opra.app temp-app.zip
-        
+
         echo "Submitting app ZIP for notarization..."
+        SUBMIT_OUT="$RUNNER_TEMP/notarize-app.txt"
         xcrun notarytool submit temp-app.zip \
           --apple-id "$APPLE_ID" \
           --password "$APPLE_ID_PASSWORD" \
           --team-id "$APPLE_TEAM_ID" \
-          --wait
-        
+          --wait 2>&1 | tee "$SUBMIT_OUT" || true
+
+        SUBMISSION_ID=$(grep -m1 -E '^[[:space:]]*id:' "$SUBMIT_OUT" | awk '{print $2}')
+        if ! grep -q 'status: Accepted' "$SUBMIT_OUT"; then
+          echo "::error::App notarization was not Accepted. Apple's notary log:"
+          xcrun notarytool log "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" --team-id "$APPLE_TEAM_ID" || true
+          exit 1
+        fi
+        echo "Notarization Accepted (submission $SUBMISSION_ID)"
+
         echo "Stapling notarization ticket to app..."
         xcrun stapler staple Opra.app
         
