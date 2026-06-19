@@ -3,12 +3,12 @@
     <channel>
         <title>Opra</title>
         <item>
-            <title>2.2.1</title>
-            <pubDate>Fri, 19 Jun 2026 20:26:36 +0000</pubDate>
-            <sparkle:version>6</sparkle:version>
-            <sparkle:shortVersionString>2.2.1</sparkle:shortVersionString>
+            <title>2.2.2</title>
+            <pubDate>Fri, 19 Jun 2026 22:23:40 +0000</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>2.2.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/kekko7072/opra/releases/download/v2.2.1-build6/Opra-2.2.1.app.zip" length="22941925" type="application/octet-stream" sparkle:edSignature="+av/JN/+knh/qDE2AA5k+n9l/HsKlYvHUn+u27FVqvZ5zl3FiTXTG73ve4d7tKR/n3WDiXqB2FLs5mmZdZQoDA=="/>
+            <enclosure url="https://github.com/kekko7072/opra/releases/download/v2.2.2-build7/Opra-2.2.2.app.zip" length="22941828" type="application/octet-stream" sparkle:edSignature="NpFDPN7MpMJjKJyb8I3ci+zlyZXSaQnRvxUOWfTkoPPThPT9TZTLq+TrRCKuVc0SQoZ6c0wQQ1KH449JWmYiBQ=="/>
         </item>
     </channel>
 </rss>
