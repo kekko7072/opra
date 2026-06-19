@@ -27,6 +27,7 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingImporter = false
     @State private var showingOnboarding = false
+    @State private var isImporting = false
 
     init() {
         let tts = TTSProviderManager()
@@ -46,6 +47,7 @@ struct ContentView: View {
                     searchText: $searchText,
                     activeDocID: reader.document?.id,
                     isReading: ttsProviderManager.isSpeaking,
+                    isImporting: isImporting,
                     onAdd: { showingImporter = true },
                     onDelete: deleteDocument,
                     onCreateFolder: createFolder,
@@ -58,17 +60,23 @@ struct ContentView: View {
                     currentPage: $reader.currentViewerPage,
                     readingPageCount: reader.document?.pageCount ?? 0,
                     showScript: $showScript,
-                    loadError: reader.loadError
+                    loadError: reader.loadError,
+                    isPageHidden: reader.hiddenPages.contains(reader.currentViewerPage),
+                    onToggleHidePage: { reader.togglePageHidden(reader.currentViewerPage) }
                 )
                 .frame(minWidth: 380)
                 if showScript {
                     ReadingScriptView(
                         documentTitle: reader.document?.title ?? "",
                         passages: reader.queue,
+                        removedPassages: reader.removedPassages,
                         activeIndex: reader.activeQueueIndex,
                         isReading: ttsProviderManager.isSpeaking,
+                        isLoading: reader.isLoading,
                         onPlay: { reader.playFrom(passage: $0) },
-                        onDelete: { reader.delete($0) }
+                        onDelete: { reader.delete($0) },
+                        onRestore: { reader.restore($0) },
+                        onRestoreAll: { reader.restoreAllPassages() }
                     )
                 }
             }
@@ -154,13 +162,26 @@ struct ContentView: View {
 
     // MARK: - Actions
     private func handleImport(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result else { return }
-        for url in urls {
-            guard let doc = try? DocumentImporter.makeDocument(from: url) else { continue }
-            modelContext.insert(doc)
-            if selection == nil { selection = doc.id }
+        guard case .success(let urls) = result, !urls.isEmpty else { return }
+        isImporting = true
+        Task {
+            var imported: [DocumentImporter.ImportedPDF] = []
+            for url in urls {
+                if let pdf = try? await Task.detached(priority: .userInitiated, operation: {
+                    try DocumentImporter.importFile(from: url)
+                }).value {
+                    imported.append(pdf)
+                }
+            }
+            for pdf in imported {
+                let doc = LibraryDocument(title: pdf.title, pageCount: pdf.pageCount,
+                                         storedFileName: pdf.storedFileName, thumbnailData: pdf.thumbnailData)
+                modelContext.insert(doc)
+                if selection == nil { selection = doc.id }
+            }
+            try? modelContext.save()
+            isImporting = false
         }
-        try? modelContext.save()
     }
 
     private func createFolder(_ name: String) {
@@ -189,6 +210,7 @@ struct ContentView: View {
             reader.close()
             selection = nil
         }
+        DocumentImporter.deleteStoredFile(for: doc)
         modelContext.delete(doc)
         try? modelContext.save()
     }

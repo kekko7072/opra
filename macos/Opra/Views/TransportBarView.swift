@@ -37,23 +37,15 @@ struct TransportBarView: View {
                         Image(systemName: playIcon).font(.title2).foregroundStyle(.white)
                     }
                 }
-                .disabled(queueCount == 0 && !tts.isSpeaking)
+                .disabled((queueCount == 0 && !tts.isSpeaking) || isKokoroDownloading)
                 Button { reader.next() } label: { Image(systemName: "forward.end.fill") }
                     .disabled(queueCount == 0)
             }
             .buttonStyle(.plain)
             .font(.title3)
 
-            VStack(spacing: 5) {
-                ProgressView(value: progress).tint(.accentColor)
-                HStack {
-                    Text("\(min(activeIndex + 1, max(queueCount, 1))) of \(queueCount) passages")
-                    Spacer()
-                    if let doc = reader.document { Text("Reading 1–\(doc.pageCount)") }
-                }
-                .font(.caption2).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
+            centerStatus
+                .frame(maxWidth: .infinity)
 
             HStack(spacing: 4) {
                 Image(systemName: "clock")
@@ -95,6 +87,72 @@ struct TransportBarView: View {
         }
         .padding(.horizontal, 22).padding(.vertical, 12)
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    // MARK: - Center status (passage progress, model download, or error)
+    private var kokoroState: ModelInstallState? {
+        tts.currentProvider == .kokoro ? tts.kokoroTTSManager.installState : nil
+    }
+    private var isKokoroDownloading: Bool {
+        if case .downloading = kokoroState { return true }
+        return false
+    }
+
+    @ViewBuilder private var centerStatus: some View {
+        if tts.currentProvider == .kokoro, let state = kokoroState, state != .installed {
+            VStack(spacing: 5) {
+                switch state {
+                case .downloading(let p):
+                    ProgressView(value: p).tint(.accentColor)
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle")
+                        Text("Downloading on-device voice… \(Int(p * 100))% — playback starts when it's ready")
+                    }
+                    .font(.caption2).foregroundStyle(.secondary)
+                case .notInstalled:
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.down.circle").foregroundStyle(.tint)
+                        Text("On-device voice not downloaded yet").font(.caption)
+                        Button("Download") { tts.kokoroTTSManager.ensureModelInstalled() }
+                            .controlSize(.small)
+                    }
+                case .failed(let message):
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(message).font(.caption).lineLimit(1)
+                        Button("Retry") { tts.kokoroTTSManager.ensureModelInstalled() }
+                            .controlSize(.small)
+                    }
+                case .installed:
+                    EmptyView()
+                }
+            }
+        } else if let error = tts.errorMessage {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Text(error).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+        } else if tts.isProcessing {
+            HStack(spacing: 8) {
+                ProgressView().scaleEffect(0.6).frame(width: 16, height: 16)
+                Text("Generating speech…").font(.caption).foregroundStyle(.secondary)
+            }
+        } else if reader.isLoading {
+            HStack(spacing: 8) {
+                ProgressView().scaleEffect(0.6).frame(width: 16, height: 16)
+                Text("Preparing reading script…").font(.caption).foregroundStyle(.secondary)
+            }
+        } else {
+            VStack(spacing: 5) {
+                ProgressView(value: progress).tint(.accentColor)
+                HStack {
+                    Text("\(min(activeIndex + 1, max(queueCount, 1))) of \(queueCount) passages")
+                    Spacer()
+                    if let doc = reader.document { Text("Reading 1–\(doc.pageCount)") }
+                }
+                .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
     }
 
     private var playIcon: String {
@@ -139,7 +197,7 @@ private struct VoiceQuickPicker: View {
                 get: { tts.currentProvider },
                 set: { tts.setProvider($0) }
             )) {
-                ForEach(TTSProvider.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(TTSProvider.allCases) { Text($0.shortName).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -152,13 +210,14 @@ private struct VoiceQuickPicker: View {
                                 tts.setVoice(voice)
                                 settings.setVoice(voice)
                             } label: {
-                                HStack {
+                                HStack(spacing: 8) {
                                     Text(voice.name)
-                                    Spacer()
+                                        .lineLimit(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     Text(voice.language).font(.caption).foregroundStyle(.secondary)
-                                    if tts.currentVoice?.identifier == voice.identifier {
-                                        Image(systemName: "checkmark").foregroundStyle(.tint)
-                                    }
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                        .opacity(tts.currentVoice?.identifier == voice.identifier ? 1 : 0)
                                 }
                                 .contentShape(Rectangle())
                             }
@@ -167,16 +226,17 @@ private struct VoiceQuickPicker: View {
                         }
                     }
                 }
-                .frame(height: 200)
+                .frame(height: 220)
             } else {
-                Text("Open Settings to configure the \(tts.currentProvider.rawValue) voice.")
+                Text("Open Settings to configure the \(tts.currentProvider.shortName) voice.")
                     .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Divider()
             Button("Open Settings…") { onShowSettings() }
         }
         .padding(16)
-        .frame(width: 290)
+        .frame(width: 360)
     }
 }

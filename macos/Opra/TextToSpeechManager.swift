@@ -287,29 +287,48 @@ import Speech
     }
 
     private func handleChunkCompletion() {
-        guard isChunked else {
-            print("Chunk completion called but not in chunked mode")
-            return
-        }
+        guard isChunked else { return }
 
-        print("Chunk \(currentChunk + 1) completed")
         currentChunk += 1
         pdfExtractor?.setCurrentChunk(currentChunk)
 
         if currentChunk < totalChunks {
-            // Move to next chunk with a small delay to prevent race conditions
-            print("Moving to chunk \(currentChunk + 1) of \(totalChunks)")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.speakCurrentChunk()
-            }
+            // Seamless continuation: no stopSpeaking() and no delay, so audio doesn't
+            // gap between passages and the play/pause state stays "playing".
+            speakNextChunk(chunkedTexts[currentChunk])
         } else {
-            // All chunks completed
-            print("All chunks completed - TTS finished")
             isChunked = false
             chunkedTexts = []
             currentChunk = 0
             totalChunks = 0
+            finishSpeakingSession()
         }
+    }
+
+    /// Speak the next passage in an active chunked session without tearing down state.
+    private func speakNextChunk(_ text: String) {
+        chunkCompletionHandler = { [weak self] in
+            guard let self, self.isChunked else { return }
+            self.handleChunkCompletion()
+        }
+        performSpeak(text, chunkCompletionHandler: chunkCompletionHandler)
+    }
+
+    /// Reset playback state when a reading session ends (last passage or single utterance).
+    private func finishSpeakingSession() {
+        isSpeaking = false
+        isPaused = false
+        isPreviewing = false
+        progressTimer?.cancel()
+        progressTimer = nil
+        stopElapsedTimeTracking()
+        timeoutTimer?.cancel()
+        timeoutTimer = nil
+        utteranceStartDate = nil
+        elapsedTime = 0.0
+        readingProgress = 1.0
+        currentWordIndex = totalWords
+        pdfExtractor?.clearCurrentWordHighlight()
     }
 
     private func startProgressTracking() {
@@ -790,28 +809,18 @@ import Speech
             return
         }
 
-        self.isSpeaking = false
-        self.isPaused = false
         self.currentUtterance = nil
-        self.isPreviewing = false
         self.progressTimer?.cancel()
         self.progressTimer = nil
-        self.stopElapsedTimeTracking()
-        self.timeoutTimer?.cancel()
-        self.timeoutTimer = nil
-        self.utteranceStartDate = nil
-        self.elapsedTime = 0.0
-        self.readingProgress = 1.0
-        self.currentWordIndex = self.totalWords
-        self.pdfExtractor?.clearCurrentWordHighlight()
 
-        // Call chunk completion handler if available
         if let handler = self.chunkCompletionHandler {
-            print("Calling chunk completion handler")
+            // A chunked reading session continues to the next passage. Keep `isSpeaking`
+            // true (no flicker) — the handler either starts the next passage seamlessly
+            // or finalizes the session when the last passage is done.
             self.chunkCompletionHandler = nil
             handler()
         } else {
-            print("No chunk completion handler to call")
+            self.finishSpeakingSession()
         }
     }
 

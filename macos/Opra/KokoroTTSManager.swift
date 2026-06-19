@@ -98,11 +98,20 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
             controller.fail("On-device Kokoro requires an Apple Silicon Mac.")
             return false
         }
-        guard installer.state == .installed else {
-            controller.fail("Download the Kokoro voice model in Settings to use on-device speech.")
+        switch installer.state {
+        case .installed:
+            return true
+        case .notInstalled:
+            installer.install()   // start the one-time download so the user sees progress
+            controller.fail("Downloading the on-device voice (~330 MB). Playback will be ready when it finishes.")
+            return false
+        case .downloading(let p):
+            controller.fail("The on-device voice is still downloading… \(Int(p * 100))%. Please wait.")
+            return false
+        case .failed(let message):
+            controller.fail("On-device voice download failed: \(message)")
             return false
         }
-        return true
     }
 
     /// One speech chunk per passage; word counts feed progress tracking.

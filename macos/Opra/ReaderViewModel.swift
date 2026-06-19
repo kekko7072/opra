@@ -18,16 +18,26 @@ final class ReaderViewModel: ObservableObject {
     @Published private(set) var pdfDocument: PDFDocument?
     @Published private(set) var allPassages: [Passage] = []
     @Published private(set) var deletedIDs: Set<Int> = []
+    @Published private(set) var hiddenPages: Set<Int> = []
     @Published var currentViewerPage: Int = 1
     @Published private(set) var loadError: String?
+    /// True while the document's text is being extracted/segmented off the main thread.
+    @Published private(set) var isLoading = false
 
     let tts: TTSProviderManager
-    private var accessingURL: URL?
+    private var loadGeneration = 0
 
     init(tts: TTSProviderManager) { self.tts = tts }
 
-    /// Non-deleted passages, in order — the reading queue.
-    var queue: [Passage] { allPassages.filter { !deletedIDs.contains($0.id) } }
+    /// Passages to read: excludes individually deleted passages and passages on hidden pages.
+    var queue: [Passage] {
+        allPassages.filter { !deletedIDs.contains($0.id) && !hiddenPages.contains($0.pageNumber) }
+    }
+
+    /// Passages the user removed from the queue, in original document order, so they can be recovered.
+    var removedPassages: [Passage] {
+        allPassages.filter { deletedIDs.contains($0.id) }
+    }
 
     /// Index of the active passage within `queue` (mirrors the engine's chunk index).
     var activeQueueIndex: Int { min(tts.currentChunkIndex, max(0, queue.count - 1)) }
@@ -40,43 +50,50 @@ final class ReaderViewModel: ObservableObject {
 
     // MARK: - Document lifecycle
     func open(_ doc: LibraryDocument) {
-        stopAccessing()
         tts.stopSpeaking()
         loadError = nil
         document = doc
         deletedIDs = Set(doc.deletedPassageIDs)
+        hiddenPages = Set(doc.hiddenPages)
 
-        guard let resolved = DocumentImporter.resolveURL(from: doc.bookmarkData) else {
-            loadError = "This file can't be found. It may have been moved or deleted."
+        let url = DocumentImporter.fileURL(for: doc)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let pdf = PDFDocument(url: url), pdf.pageCount > 0 else {
+            loadError = "This document's file is missing. Try removing and re-adding it."
             pdfDocument = nil
             allPassages = []
+            isLoading = false
             return
         }
-        if resolved.url.startAccessingSecurityScopedResource() { accessingURL = resolved.url }
-        guard let pdf = PDFDocument(url: resolved.url), pdf.pageCount > 0 else {
-            loadError = "Could not open this PDF."
-            pdfDocument = nil
-            allPassages = []
-            return
-        }
-        pdfDocument = pdf
-        allPassages = PassageSegmenter.passages(for: pdf)
+        pdfDocument = pdf            // viewer renders immediately
         currentViewerPage = 1
         doc.lastOpened = Date()
+
+        // Extract + segment passages off the main thread so the UI stays responsive
+        // and can show a "Preparing…" indicator on large documents.
+        loadGeneration += 1
+        let generation = loadGeneration
+        let docID = doc.id
+        isLoading = true
+        Task.detached(priority: .userInitiated) {
+            let passages = PassageSegmenter.passages(for: pdf)
+            await MainActor.run {
+                guard self.loadGeneration == generation, self.document?.id == docID else { return }
+                self.allPassages = passages
+                self.isLoading = false
+            }
+        }
     }
 
     func close() {
         tts.stopSpeaking()
-        stopAccessing()
+        loadGeneration += 1
+        isLoading = false
         document = nil
         pdfDocument = nil
         allPassages = []
         deletedIDs = []
-    }
-
-    private func stopAccessing() {
-        accessingURL?.stopAccessingSecurityScopedResource()
-        accessingURL = nil
+        hiddenPages = []
     }
 
     // MARK: - Playback
@@ -111,9 +128,30 @@ final class ReaderViewModel: ObservableObject {
         if wasSpeaking { play(from: min(resumeAt, max(0, queue.count - 1))) }
     }
 
+    /// Hide (or unhide) a page so its passages aren't read.
+    func togglePageHidden(_ page: Int) {
+        let wasSpeaking = tts.isSpeaking
+        let resumeAt = activeQueueIndex
+        if hiddenPages.contains(page) { hiddenPages.remove(page) } else { hiddenPages.insert(page) }
+        document?.hiddenPages = Array(hiddenPages).sorted()
+        if wasSpeaking { play(from: min(resumeAt, max(0, queue.count - 1))) }
+    }
+
+    /// Bring a single removed passage back into the reading queue.
+    func restore(_ passage: Passage) {
+        let wasSpeaking = tts.isSpeaking
+        let resumeAt = activeQueueIndex
+        deletedIDs.remove(passage.id)
+        document?.deletedPassageIDs = Array(deletedIDs).sorted()
+        if wasSpeaking { play(from: min(resumeAt, max(0, queue.count - 1))) }
+    }
+
     func restoreAllPassages() {
+        let wasSpeaking = tts.isSpeaking
+        let resumeAt = activeQueueIndex
         deletedIDs.removeAll()
         document?.deletedPassageIDs = []
+        if wasSpeaking { play(from: min(resumeAt, max(0, queue.count - 1))) }
     }
 
     // MARK: - Persistence

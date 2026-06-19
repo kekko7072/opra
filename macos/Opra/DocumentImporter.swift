@@ -2,8 +2,9 @@
 //  DocumentImporter.swift
 //  Opra
 //
-//  Builds LibraryDocument records from user-selected PDFs (security-scoped bookmark +
-//  page-1 thumbnail) and resolves bookmarks back to usable URLs.
+//  Imports user-selected PDFs by copying them into the app's Library container, so the
+//  sandbox can always read them later without security-scoped bookmarks (which proved
+//  unreliable). Also renders the page-1 thumbnail.
 //
 
 import Foundation
@@ -16,37 +17,53 @@ enum DocumentImporter {
         var errorDescription: String? { "Could not read the selected PDF file." }
     }
 
-    /// Create a library record for a user-selected URL. Caller owns inserting it into the model context.
-    static func makeDocument(from url: URL) throws -> LibraryDocument {
+    /// Plain (Sendable) result of importing a file — safe to produce off the main
+    /// thread; the SwiftData LibraryDocument is created from it on the main actor.
+    struct ImportedPDF: Sendable {
+        let title: String
+        let pageCount: Int
+        let storedFileName: String
+        let thumbnailData: Data?
+    }
+
+    /// Directory inside the app container where imported PDFs are stored.
+    static var libraryDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let dir = base.appendingPathComponent("Opra/Library", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    static func fileURL(for doc: LibraryDocument) -> URL {
+        libraryDirectory.appendingPathComponent(doc.storedFileName)
+    }
+
+    /// Copy a user-selected PDF into the library container and read its metadata.
+    /// Safe to call off the main thread (does file I/O + thumbnail rendering).
+    static func importFile(from url: URL) throws -> ImportedPDF {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
-        let bookmark = try url.bookmarkData(
-            options: .withSecurityScope,
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
         guard let pdf = PDFDocument(url: url), pdf.pageCount > 0 else {
             throw ImportError.notReadable
         }
-        return LibraryDocument(
+
+        let fileName = "\(UUID().uuidString).pdf"
+        let dest = libraryDirectory.appendingPathComponent(fileName)
+        try? FileManager.default.removeItem(at: dest)
+        try FileManager.default.copyItem(at: url, to: dest)
+
+        return ImportedPDF(
             title: url.deletingPathExtension().lastPathComponent,
             pageCount: pdf.pageCount,
-            bookmarkData: bookmark,
+            storedFileName: fileName,
             thumbnailData: thumbnail(for: pdf)
         )
     }
 
-    /// Resolve a stored bookmark to a URL. `stale` indicates the bookmark should be refreshed.
-    static func resolveURL(from bookmark: Data) -> (url: URL, isStale: Bool)? {
-        var stale = false
-        guard let url = try? URL(
-            resolvingBookmarkData: bookmark,
-            options: .withSecurityScope,
-            relativeTo: nil,
-            bookmarkDataIsStale: &stale
-        ) else { return nil }
-        return (url, stale)
+    /// Remove the copied PDF when a document is deleted from the library.
+    static func deleteStoredFile(for doc: LibraryDocument) {
+        try? FileManager.default.removeItem(at: fileURL(for: doc))
     }
 
     /// Render a page-1 thumbnail as PNG data.

@@ -19,6 +19,15 @@ enum TTSProvider: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Short label for compact controls (e.g. the segmented voice picker).
+    var shortName: String {
+        switch self {
+        case .system: return "System"
+        case .openAI: return "OpenAI"
+        case .kokoro: return "Kokoro"
+        }
+    }
+
     var description: String {
         switch self {
         case .system:

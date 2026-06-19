@@ -15,8 +15,9 @@ final class LibraryDocument {
     @Attribute(.unique) var id: UUID
     var title: String
     var pageCount: Int
-    /// App-scoped security-scoped bookmark to the original file.
-    var bookmarkData: Data
+    /// Filename of the PDF copied into the app's Library container (always readable
+    /// under the sandbox; no security-scoped bookmark needed).
+    var storedFileName: String
     /// Cached page-1 thumbnail (PNG).
     @Attribute(.externalStorage) var thumbnailData: Data?
     var dateAdded: Date
@@ -25,6 +26,8 @@ final class LibraryDocument {
     var lastPassageIndex: Int
     /// Passage IDs the user removed from the reading queue.
     var deletedPassageIDs: [Int]
+    /// 1-based page numbers the user chose to skip (their passages aren't read).
+    var hiddenPages: [Int] = []
     /// Folder this document belongs to, or nil for "Unfiled". Inverse of LibraryFolder.documents.
     var folder: LibraryFolder?
 
@@ -32,21 +35,23 @@ final class LibraryDocument {
         id: UUID = UUID(),
         title: String,
         pageCount: Int,
-        bookmarkData: Data,
+        storedFileName: String,
         thumbnailData: Data? = nil,
         dateAdded: Date = Date(),
         lastOpened: Date? = nil,
         lastPassageIndex: Int = 0,
-        deletedPassageIDs: [Int] = []
+        deletedPassageIDs: [Int] = [],
+        hiddenPages: [Int] = []
     ) {
         self.id = id
         self.title = title
         self.pageCount = pageCount
-        self.bookmarkData = bookmarkData
+        self.storedFileName = storedFileName
         self.thumbnailData = thumbnailData
         self.dateAdded = dateAdded
         self.lastOpened = lastOpened
         self.lastPassageIndex = lastPassageIndex
         self.deletedPassageIDs = deletedPassageIDs
+        self.hiddenPages = hiddenPages
     }
 }

@@ -18,6 +18,7 @@ struct LibrarySidebarView: View {
     @Binding var searchText: String
     var activeDocID: UUID?
     var isReading: Bool
+    var isImporting: Bool
     var onAdd: () -> Void
     var onDelete: (LibraryDocument) -> Void
     var onCreateFolder: (String) -> Void
@@ -63,10 +64,20 @@ struct LibrarySidebarView: View {
 
             Divider()
             Button(action: onAdd) {
-                Label("Add PDF", systemImage: "plus")
-                    .fontWeight(.medium).frame(maxWidth: .infinity).padding(.vertical, 8)
+                Group {
+                    if isImporting {
+                        HStack(spacing: 6) {
+                            ProgressView().scaleEffect(0.6).frame(width: 14, height: 14)
+                            Text("Adding…")
+                        }
+                    } else {
+                        Label("Add PDF", systemImage: "plus")
+                    }
+                }
+                .fontWeight(.medium).frame(maxWidth: .infinity).padding(.vertical, 8)
             }
             .buttonStyle(.plain)
+            .disabled(isImporting)
             .background(Color(nsColor: .quaternaryLabelColor).opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
             .padding(12)
             .popoverTip(AddPDFTip(), arrowEdge: .bottom)

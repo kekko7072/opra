@@ -15,6 +15,8 @@ struct ReaderPaneView: View {
     let readingPageCount: Int
     @Binding var showScript: Bool
     let loadError: String?
+    let isPageHidden: Bool
+    var onToggleHidePage: () -> Void
 
     @State private var pdfView = PDFView()
 
@@ -38,6 +40,16 @@ struct ReaderPaneView: View {
 
             Spacer()
 
+            if pdfDocument != nil {
+                Button(action: onToggleHidePage) {
+                    Label(isPageHidden ? "Page Skipped" : "Skip Page",
+                          systemImage: isPageHidden ? "eye.slash" : "eye")
+                }
+                .buttonStyle(.bordered)
+                .tint(isPageHidden ? .orange : nil)
+                .help(isPageHidden ? "This page is skipped — click to read it again"
+                                   : "Skip this page when reading")
+            }
             if readingPageCount > 0 {
                 Text("Reading 1–\(readingPageCount)").font(.callout).foregroundStyle(.secondary)
             }
@@ -70,18 +82,25 @@ struct ReaderPaneView: View {
     }
 
     private func setup(_ document: PDFDocument) {
-        pdfView.document = document
-        pdfView.autoScales = true
-        pdfView.displayMode = .singlePageContinuous
-        pdfView.displayDirection = .vertical
-        pdfView.interpolationQuality = .high
-        goToPage(currentPage)
+        // Defer off the current SwiftUI layout pass — mutating the PDFView (and the
+        // implicit go(to:) layout) while the view is being laid out triggers an
+        // AppKit layout-recursion warning.
+        DispatchQueue.main.async {
+            pdfView.document = document
+            pdfView.autoScales = true
+            pdfView.displayMode = .singlePageContinuous
+            pdfView.displayDirection = .vertical
+            pdfView.interpolationQuality = .high
+            goToPage(currentPage)
+        }
     }
 
     private func goToPage(_ page: Int) {
-        guard let document = pdfView.document,
-              let target = document.page(at: max(0, min(page - 1, document.pageCount - 1))) else { return }
-        if pdfView.currentPage != target { pdfView.go(to: target) }
+        DispatchQueue.main.async {
+            guard let document = pdfView.document,
+                  let target = document.page(at: max(0, min(page - 1, document.pageCount - 1))) else { return }
+            if pdfView.currentPage != target { pdfView.go(to: target) }
+        }
     }
 
     private func goPrevious() {
