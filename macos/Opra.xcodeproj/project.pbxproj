@@ -38,6 +38,7 @@
 		FEE0000000000000000000B2 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000B1 /* MLX */; };
 		FEE0000000000000000000C2 /* MLXUtilsLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000C1 /* MLXUtilsLibrary */; };
 		FEE0000000000000000000D2 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000D1 /* Sparkle */; };
+		FEE0000000000000000000A3 /* KokoroSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = FEE0000000000000000000A1 /* KokoroSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		FEF1110000000000000000A2 /* AudioWAV.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF1110000000000000000A1 /* AudioWAV.swift */; };
 		FEF2220000000000000000A2 /* KokoroModelInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF2220000000000000000A1 /* KokoroModelInstaller.swift */; };
 		FEF3330000000000000000A2 /* KokoroTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF3330000000000000000A1 /* KokoroTTSManager.swift */; };
@@ -98,6 +99,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1234567890ABCDEF1234580 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				FEE0000000000000000000A3 /* KokoroSwift in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXGroup section */
 		A1234567890ABCDEF1234559 = {
@@ -184,6 +199,7 @@
 				A1234567890ABCDEF123455C /* Sources */,
 				A1234567890ABCDEF1234560 /* Frameworks */,
 				A1234567890ABCDEF1234561 /* Resources */,
+				A1234567890ABCDEF1234580 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

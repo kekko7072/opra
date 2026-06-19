@@ -1,188 +1,146 @@
-# Opra - Cross-Platform PDF Reader AI
+# Opra — PDF Reader AI
 
 ![App Icon](./app-icon.png)
 
 ![Video Demo](./app-recording.gif)
 
-A cross-platform application that reads PDF documents aloud using AI-powered text-to-speech technology. Available for both macOS and Windows.
+Opra reads PDF documents aloud using AI-powered text-to-speech. **The macOS app is the actively developed product.** A Windows port exists as a scaffold but is **not yet shipping** — see the [Roadmap / TODO](#roadmap--todo).
 
 ## How it works
 
 Opra follows a simple three-step process:
 1. **Extract** text from your PDF file
 2. **Convert** text to speech using AI voices
-3. **Play** the audio with progress tracking
+3. **Play** the audio with progress tracking and follow-along highlighting
 
 ```
 PDF → Extract Text → AI Speech → Audio Playback
 ```
 
-## Quick Start
+## Quick Start (macOS)
 
-### macOS
-1. **Open PDF**: Click "Select PDF" or press ⌘O
-2. **Choose pages**: Select which pages to read
-3. **Start reading**: Click play or press spacebar
-4. **Control**: Use play/pause/stop and adjust speed
+1. **Add a PDF**: import a document into the library
+2. **Open it**: select the document to build its reading script
+3. **Pick a voice**: choose System, OpenAI, or on-device Kokoro from the transport bar
+4. **Start reading**: press play, then control play/pause, skip, and speed from the transport bar (⌘, opens Settings)
 
-### Windows
-1. **Open PDF**: Click "Select PDF" or press Ctrl+O
-2. **Choose pages**: Select which pages to read
-3. **Start reading**: Click play or press spacebar
-4. **Control**: Use play/pause/stop and adjust speed
+## Key Features (macOS)
 
-## Key Features
-
-- **Cross-Platform**: Works on both macOS and Windows
-- **AI-Powered Voices**: System voices plus API-backed OpenAI voices on macOS
-- **Page Selection**: Read specific pages or entire document
-- **Speed Control**: Adjust reading speed
-- **Progress Tracking**: See current reading position
-- **Keyboard Shortcuts**: 
-  - macOS: ⌘O (open), Space (play/pause), ⌘S (stop)
-  - Windows: Ctrl+O (open), Space (play/pause), Ctrl+S (stop)
+- **Three TTS providers**
+  - **System** — macOS built-in voices (offline)
+  - **OpenAI** — high-quality cloud voices (API key stored in the Keychain)
+  - **Kokoro** — open-source neural voice running fully **on-device** (Apple Silicon; one-time ~330 MB model download). This is the default provider.
+- **Page-level reading** — each page becomes a single reading passage, so playback and highlighting track the document a page at a time
+- **Reading script** — play from any passage, remove passages from the queue, and **restore removed passages** at any time
+- **Follow-along highlighting** and page sync while it reads
+- **Speed control**, progress tracking, and resume where you left off
+- **Library** with folders, thumbnails, and persistent reading state (SwiftData)
+- **Automatic updates** via Sparkle
 
 ## Voice Quality Options
 
-### Recommended API setup
+### OpenAI (cloud)
 
-For the highest-quality voices, macOS builds can use OpenAI Text-to-Speech from Settings:
+For the highest-quality cloud voices, enable OpenAI Text-to-Speech in Settings:
 
 - Model: `gpt-4o-mini-tts`
 - Best built-in voices: `marin` or `cedar`
 - Other voices: `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`, `verse`
 - Fallback models: `tts-1-hd` for quality, `tts-1` for lower latency
 
-The app stores the OpenAI API key in the macOS Keychain and splits long PDFs into smaller speech requests.
+The app stores the OpenAI API key in the macOS Keychain and splits long passages into smaller speech requests automatically.
 
-### Local model direction
+### Kokoro (on-device, default)
 
-Ollama text models are not TTS engines, so the previous Ollama option was not a reliable voice path. Good local TTS candidates to integrate behind a local HTTP service are:
-
-- `Kokoro-82M`: lightweight Apache-2.0 open-weight TTS, good default local candidate.
-- `Chatterbox Multilingual V3`: expressive multilingual/voice-cloning TTS, heavier than Kokoro.
-- `XTTS-v2`: multilingual voice cloning, useful when speaker cloning matters; check its license before commercial use.
-- `Piper`: fast CPU-friendly local TTS; useful for offline reliability, but its original repository is archived and development moved.
+Kokoro-82M is a lightweight, Apache-2.0 open-weight neural TTS that runs entirely on your Mac — no internet required. Opra downloads the model once (~330 MB) and synthesizes each page as model-sized segments behind the scenes. Requires an Apple Silicon Mac.
 
 ### Speech-to-text note
 
 Opra is currently a text-to-speech PDF reader. If speech-to-text is added later, use OpenAI `gpt-4o-transcribe` for higher quality, `gpt-4o-mini-transcribe` for lower cost/latency, or `gpt-4o-transcribe-diarize` when speaker labels are required. For fully local transcription, prefer WhisperKit on Apple platforms or whisper.cpp for broad local CPU/GPU support.
 
-## Requirements
+## Requirements (macOS)
 
-### macOS
-- macOS 12.0 or later
+- macOS 15.0 (Sequoia) or later
+- Apple Silicon Mac for the on-device Kokoro voice (System and OpenAI voices work on any supported Mac)
 - PDF files with readable text (not scanned images)
 
-### Windows
-- Windows 10 version 1903 or later
-- .NET 8.0 Runtime
-- PDF files with readable text (not scanned images)
+## Download & Installation (macOS)
 
-## Download & Installation
-
-### Option 1: Download Pre-built Apps
+### Option 1: Download the pre-built app
 
 1. Go to the [Releases page](https://github.com/kekko7072/Opra/releases)
-2. Download the appropriate installer for your platform:
-   - **macOS**: `.dmg` file
-   - **Windows**: `.exe` installer
-3. Install and launch the application
+2. Download the macOS `.dmg`
+3. Drag Opra to your Applications folder and launch it
 
-#### ✅ Code Signed
+The macOS app is code-signed and notarized by Apple, so it runs without security warnings.
 
-The apps are properly code-signed for their respective platforms, so they should install and run without security warnings.
+### Option 2: Build from source
 
-### Option 2: Build from Source
+```bash
+git clone https://github.com/kekko7072/Opra.git
+cd Opra/macos
+open Opra.xcodeproj
+# Build and run in Xcode (⌘R)
+```
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/kekko7072/Opra.git
-   cd Opra
-   ```
+> **Toolchain:** the macOS app and its Swift package dependencies require **Xcode 26 / Swift 6.2** (for example, `MLXUtilsLibrary` ships a `swift-tools-version: 6.2` manifest). CI selects the latest stable Xcode on the runner accordingly.
 
-2. Build for your platform:
+## Releasing (macOS)
 
-   **Build everything:**
-   ```bash
-   ./build.sh all          # macOS/Linux
-   build.bat all           # Windows
-   ```
+Releases are produced by the `Build and Release` GitHub Actions workflow, which builds, code-signs, notarizes, and publishes a `.dmg` + `.app.zip` whenever a version bump lands on `main`. Use the helper script to cut one:
 
-   **Build specific platform:**
-   ```bash
-   ./build.sh macos        # macOS only
-   ./build.sh windows      # Windows only
-   ```
+```bash
+./release.sh            # prompts for the new version (and build) number, then pushes
+```
 
-   **macOS (using Xcode):**
-   ```bash
-   cd macos
-   open Opra.xcodeproj
-   # Build and run in Xcode (⌘R)
-   ```
+The script bumps `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project, commits the bump, and pushes to `main` to trigger the release.
 
-   **Windows (using Visual Studio):**
-   ```bash
-   cd windows
-   dotnet build -c Release
-   dotnet run --project Opra
-   ```
+## Roadmap / TODO
+
+- [ ] **Windows app** — a WinUI 3 port lives under [`windows/`](./windows) but is **not yet shipping**. It currently targets System.Speech / iText7 and lacks the OpenAI and on-device Kokoro providers, page-level reading, and the passage recovery features of the macOS app. Bringing it to parity is tracked here.
+- [ ] Speech-to-text / transcription (see note above)
+- [ ] Additional on-device voices / languages
 
 ## Project Structure
 
 ```
 Opra/
-├── macos/                 # macOS SwiftUI application
+├── macos/                 # macOS SwiftUI application (active)
 │   ├── Opra.xcodeproj
 │   └── Opra/
-├── windows/               # Windows WinUI 3 application
+├── windows/               # Windows WinUI 3 application (TODO — not shipping)
 │   ├── Opra.sln
 │   └── Opra/
-├── build.sh              # Build script (macOS/Linux)
-├── build.bat             # Build script (Windows)
+├── build.sh               # Build helper (macOS/Linux)
+├── build.bat              # Build helper (Windows)
+├── release.sh             # macOS release helper (version bump + push)
 └── README.md
 ```
 
 ## Development
 
-### Prerequisites
+### macOS (active)
 
-**macOS Development:**
-- Xcode 14.0 or later
-- macOS 12.0 or later
+**Prerequisites**
+- Xcode 26 or later (Swift 6.2)
+- macOS 15.0 or later
 
-**Windows Development:**
+```bash
+cd macos
+open Opra.xcodeproj   # ⌘R to build & run
+```
+
+**Architecture:** SwiftUI + PDFKit + AVFoundation, with three pluggable TTS engines (System / OpenAI / on-device Kokoro via MLX) behind a common `TTSEngine` protocol. A shared `AudioPlaybackController` drives chunked synthesis/playback for the audio-producing providers.
+
+### Windows (TODO)
+
+> 🚧 The Windows app is a planned port and is **not yet at parity** with macOS. The notes below describe the existing scaffold.
+
+**Prerequisites**
 - Visual Studio 2022 or later
 - .NET 8.0 SDK
 - Windows 10 SDK (10.0.19041.0 or later)
 
-### Building
+**Architecture:** WinUI 3 with iText7 and System.Speech.
 
-The project uses a unified build system that supports both platforms:
-
-```bash
-# Build everything
-./build.sh all
-
-# Build specific platform
-./build.sh macos
-./build.sh windows
-```
-
-### Architecture
-
-The application uses platform-native implementations:
-
-1. **macOS**: SwiftUI with native PDFKit and AVFoundation
-2. **Windows**: WinUI 3 with iText7 and System.Speech
-
-### Cross-Platform Building Notes
-
-**Important:** Windows App SDK applications cannot be built on Linux/macOS using Docker due to Windows-specific build tool dependencies. 
-
-To build the Windows version:
-- Use a Windows machine or VM
-- Use GitHub Actions with a Windows runner (recommended for CI/CD)
-- Use cloud build services like Azure DevOps with Windows agents
-
+**Note:** Windows App SDK applications cannot be built on Linux/macOS due to Windows-specific build-tool dependencies. Build the Windows version on a Windows machine/VM or a Windows CI runner.
