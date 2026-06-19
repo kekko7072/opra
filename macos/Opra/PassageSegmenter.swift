@@ -2,27 +2,26 @@
 //  PassageSegmenter.swift
 //  Opra
 //
-//  Turns a PDF into an ordered, page-tagged list of reading passages. Text is
-//  normalized (de-hyphenated, whitespace-collapsed) then split into sentences with
-//  Foundation's locale-aware sentence enumerator; very short fragments (headings,
-//  stray tokens) are merged forward so the reader gets sensible spans.
+//  Turns a PDF into an ordered, page-tagged list of reading passages. Each page becomes
+//  a single passage holding the whole page's normalized (de-hyphenated,
+//  whitespace-collapsed) text, so reading chunks are as large as the page allows.
+//  Providers with a per-request limit (OpenAI, Kokoro) re-split a passage into
+//  model-sized speech chunks internally; passage highlighting still tracks whole pages.
 //
 
 import Foundation
 import PDFKit
 
 enum PassageSegmenter {
-    static func passages(for pdf: PDFDocument, minLength: Int = 40) -> [Passage] {
+    static func passages(for pdf: PDFDocument) -> [Passage] {
         var result: [Passage] = []
         var nextID = 0
         for pageIndex in 0..<pdf.pageCount {
             guard let page = pdf.page(at: pageIndex), let raw = page.string else { continue }
             let text = normalize(raw)
             guard !text.isEmpty else { continue }
-            for sentence in mergeShort(splitSentences(text), minLength: minLength) {
-                result.append(Passage(id: nextID, text: sentence, pageNumber: pageIndex + 1))
-                nextID += 1
-            }
+            result.append(Passage(id: nextID, text: text, pageNumber: pageIndex + 1))
+            nextID += 1
         }
         return result
     }
@@ -33,32 +32,5 @@ enum PassageSegmenter {
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func splitSentences(_ text: String) -> [String] {
-        var sentences: [String] = []
-        text.enumerateSubstrings(in: text.startIndex..<text.endIndex,
-                                 options: [.bySentences, .localized]) { sub, _, _, _ in
-            if let s = sub?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
-                sentences.append(s)
-            }
-        }
-        return sentences.isEmpty ? [text] : sentences
-    }
-
-    private static func mergeShort(_ sentences: [String], minLength: Int) -> [String] {
-        var merged: [String] = []
-        var buffer = ""
-        for s in sentences {
-            buffer = buffer.isEmpty ? s : buffer + " " + s
-            if buffer.count >= minLength {
-                merged.append(buffer)
-                buffer = ""
-            }
-        }
-        if !buffer.isEmpty {
-            if merged.isEmpty { merged.append(buffer) } else { merged[merged.count - 1] += " " + buffer }
-        }
-        return merged
     }
 }

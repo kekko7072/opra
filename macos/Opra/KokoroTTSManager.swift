@@ -114,11 +114,75 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
         }
     }
 
-    /// One speech chunk per passage; word counts feed progress tracking.
+    /// The Kokoro model synthesizes only a bounded amount of text per inference, so a
+    /// page-sized passage is broken into sentence-aligned speech chunks that stay under
+    /// the limit. Word counts are cumulative across the passage so progress tracking and
+    /// follow-text highlighting stay correct; the passage itself remains one highlighted
+    /// document chunk in the reading script.
     private func split(_ text: String) -> [AudioPlaybackController.SpeechChunk] {
-        let words = text.split(whereSeparator: { $0.isWhitespace }).count
-        guard words > 0 else { return [] }
-        return [.init(text: text, startWordIndex: 0, wordCount: words)]
+        let maxCharacters = 400
+        var chunks: [AudioPlaybackController.SpeechChunk] = []
+        var buffer = ""
+        var bufferWords = 0
+        var startWordIndex = 0
+
+        func flush() {
+            guard !buffer.isEmpty else { return }
+            chunks.append(.init(text: buffer, startWordIndex: startWordIndex, wordCount: bufferWords))
+            startWordIndex += bufferWords
+            buffer = ""
+            bufferWords = 0
+        }
+
+        for unit in Self.boundedUnits(text, maxCharacters: maxCharacters) {
+            let words = unit.split(whereSeparator: { $0.isWhitespace }).count
+            if !buffer.isEmpty, buffer.count + 1 + unit.count > maxCharacters { flush() }
+            buffer = buffer.isEmpty ? unit : buffer + " " + unit
+            bufferWords += words
+        }
+        flush()
+        return chunks
+    }
+
+    /// Sentences from `text`, with any sentence longer than `maxCharacters` further
+    /// broken into word groups that fit, so no returned unit exceeds the budget.
+    private static func boundedUnits(_ text: String, maxCharacters: Int) -> [String] {
+        var units: [String] = []
+        for sentence in sentences(in: text) {
+            if sentence.count <= maxCharacters {
+                units.append(sentence)
+            } else {
+                units.append(contentsOf: wordGroups(sentence, maxCharacters: maxCharacters))
+            }
+        }
+        return units
+    }
+
+    private static func sentences(in text: String) -> [String] {
+        var result: [String] = []
+        text.enumerateSubstrings(in: text.startIndex..<text.endIndex,
+                                 options: [.bySentences, .localized]) { sub, _, _, _ in
+            if let s = sub?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
+                result.append(s)
+            }
+        }
+        return result.isEmpty ? [text] : result
+    }
+
+    private static func wordGroups(_ text: String, maxCharacters: Int) -> [String] {
+        var groups: [String] = []
+        var current = ""
+        for word in text.split(whereSeparator: { $0.isWhitespace }).map(String.init) {
+            let candidate = current.isEmpty ? word : current + " " + word
+            if candidate.count > maxCharacters, !current.isEmpty {
+                groups.append(current)
+                current = word
+            } else {
+                current = candidate
+            }
+        }
+        if !current.isEmpty { groups.append(current) }
+        return groups
     }
 
     private func synthesize(_ text: String) async throws -> Data {

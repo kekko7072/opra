@@ -15,7 +15,15 @@ import Combine
 @MainActor
 final class TTSProviderManager: ObservableObject {
     /// Stays a settable @Published so SwiftUI `Picker(selection:)` can bind to it.
-    @Published var currentProvider: TTSProvider = .system
+    /// The choice is persisted so the app reopens with the same voice provider.
+    @Published var currentProvider: TTSProvider = .system {
+        didSet {
+            guard currentProvider != oldValue else { return }
+            UserDefaults.standard.set(currentProvider.rawValue, forKey: Self.providerDefaultsKey)
+        }
+    }
+
+    private static let providerDefaultsKey = "selectedTTSProvider"
 
     // Concrete references for views that drive provider-specific UI
     // (VoicePickerView needs the system manager; SettingsView calls OpenAI.refreshConfiguration()).
@@ -35,6 +43,16 @@ final class TTSProviderManager: ObservableObject {
         openAITTSManager = openAI
         kokoroTTSManager = kokoro
         engines = [.system: system, .openAI: openAI, .kokoro: kokoro]
+
+        // Restore the saved provider; default to on-device Kokoro where it's supported.
+        // (Assigning in init doesn't fire `didSet`, so the default isn't persisted until
+        // the user actually picks a provider.)
+        if let raw = UserDefaults.standard.string(forKey: Self.providerDefaultsKey),
+           let saved = TTSProvider(rawValue: raw) {
+            currentProvider = saved
+        } else if KokoroTTSManager.isSupported {
+            currentProvider = .kokoro
+        }
 
         // Re-emit each engine's changes as our own so SwiftUI refreshes on provider state.
         system.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
@@ -73,11 +91,19 @@ final class TTSProviderManager: ObservableObject {
     }
 
     func setProvider(_ provider: TTSProvider) {
-        // Stop whichever engine is mid-utterance before switching.
-        engines.values.forEach { engine in
-            if engine.isSpeaking || engine.isProcessing { engine.stopSpeaking() }
-        }
+        guard provider != currentProvider else { return }
+        // Reflect the choice immediately so the picker updates without flicker (and it
+        // persists via `currentProvider`'s observer).
         currentProvider = provider
+        // Stop whichever engine was mid-utterance on the next main-actor turn. Doing it
+        // synchronously here cascades published resets out of AudioPlaybackController
+        // while SwiftUI is still processing the picker's update, which it warns about
+        // ("Publishing changes from within view updates is not allowed").
+        Task { @MainActor [weak self] in
+            self?.engines.values.forEach { engine in
+                if engine.isSpeaking || engine.isProcessing { engine.stopSpeaking() }
+            }
+        }
     }
 
     // MARK: - Capability-gated forwards (safe defaults when the active engine lacks it)
