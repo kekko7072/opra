@@ -162,7 +162,7 @@ struct TransportBarView: View {
         switch tts.currentProvider {
         case .system: return "mic"
         case .openAI: return "sparkles"
-        case .kokoro: return "cpu"
+        case .kokoro, .ollama: return "cpu"
         }
     }
     private var voiceTitle: String {
@@ -170,6 +170,7 @@ struct TransportBarView: View {
         case .system: return tts.currentVoice?.name ?? "Default"
         case .openAI: return "OpenAI"
         case .kokoro: return "Kokoro"
+        case .ollama: return "Ollama"
         }
     }
     private var voiceSubtitle: String {
@@ -177,6 +178,7 @@ struct TransportBarView: View {
         case .system: return tts.currentVoice?.language ?? "en-US"
         case .openAI: return settings.openAITTSVoice
         case .kokoro: return tts.kokoroTTSManager.selectedVoice
+        case .ollama: return settings.ollamaTTSVoice
         }
     }
     private func formatTime(_ t: TimeInterval) -> String {

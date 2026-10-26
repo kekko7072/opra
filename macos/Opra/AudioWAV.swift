@@ -10,12 +10,23 @@ import Foundation
 
 enum AudioWAV {
     static func data(fromMonoFloat samples: [Float], sampleRate: Int) -> Data {
+        var pcm = Data(capacity: samples.count * 2)
+        for sample in samples {
+            let clamped = max(-1.0, min(1.0, sample))
+            var le = Int16(clamped * 32767.0).littleEndian
+            withUnsafeBytes(of: &le) { pcm.append(contentsOf: $0) }
+        }
+        return data(fromMonoInt16PCM: pcm, sampleRate: sampleRate)
+    }
+
+    /// Input is signed 16-bit little-endian mono PCM.
+    static func data(fromMonoInt16PCM pcm: Data, sampleRate: Int) -> Data {
         let channels = 1
         let bitsPerSample = 16
         let bytesPerSample = bitsPerSample / 8
         let byteRate = sampleRate * channels * bytesPerSample
         let blockAlign = channels * bytesPerSample
-        let dataSize = samples.count * bytesPerSample
+        let dataSize = pcm.count
 
         var data = Data(capacity: 44 + dataSize)
         func appendString(_ s: String) { data.append(contentsOf: Array(s.utf8)) }
@@ -36,11 +47,7 @@ enum AudioWAV {
         appendString("data")
         appendU32(UInt32(dataSize))
 
-        for sample in samples {
-            let clamped = max(-1.0, min(1.0, sample))
-            var le = Int16(clamped * 32767.0).littleEndian
-            withUnsafeBytes(of: &le) { data.append(contentsOf: $0) }
-        }
+        data.append(pcm)
         return data
     }
 }

@@ -141,6 +141,8 @@ private struct VoicesPane: View {
                 openAIConfig
             } else if ttsProviderManager.currentProvider == .kokoro {
                 KokoroConfig(manager: ttsProviderManager.kokoroTTSManager)
+            } else if ttsProviderManager.currentProvider == .ollama {
+                OllamaConfig(manager: ttsProviderManager.ollamaTTSManager, settings: settingsManager)
             }
         }
         .sheet(isPresented: $showingVoicePicker) {
@@ -211,7 +213,7 @@ private struct VoicesPane: View {
                 Picker("", selection: Binding(
                     get: { settingsManager.openAITTSVoice },
                     set: { settingsManager.setOpenAITTSVoice($0) }
-                )) { ForEach(SettingsManager.openAITTSVoices, id: \.self) { Text($0).tag($0) } }
+                )) { ForEach(OpenAISpeechOptions.voices(for: settingsManager.openAITTSModel), id: \.self) { Text($0).tag($0) } }
                 .labelsHidden()
             }
             HStack(alignment: .top) {
@@ -220,9 +222,61 @@ private struct VoicesPane: View {
                     get: { settingsManager.openAITTSInstructions },
                     set: { settingsManager.setOpenAITTSInstructions($0) }
                 ), axis: .vertical).textFieldStyle(.roundedBorder).lineLimit(2...4)
+                    .disabled(!OpenAISpeechOptions.supportsInstructions(settingsManager.openAITTSModel))
             }
             Text(settingsManager.openAIAPIKey.isEmpty ? "OpenAI TTS is not configured" : "OpenAI TTS is configured")
                 .font(.caption).foregroundStyle(settingsManager.openAIAPIKey.isEmpty ? .orange : .green)
+        }
+    }
+}
+
+private struct OllamaConfig: View {
+    @ObservedObject var manager: OllamaTTSManager
+    @ObservedObject var settings: SettingsManager
+
+    private var voices: [String] {
+        Array(Set(manager.availableVoices + [settings.ollamaTTSVoice])).sorted()
+    }
+
+    var body: some View {
+        SettingsSection("Ollama · Phonon") {
+            Text("English speech generated locally on an Apple Silicon Mac. No API key required.")
+                .font(.caption).foregroundStyle(.secondary)
+            Link("Download Ollama", destination: URL(string: "https://ollama.com/download/mac")!)
+            Text("Install and open Ollama 0.40.11 or later, then run this in Terminal:")
+            Text("ollama pull phonon")
+                .font(.system(.body, design: .monospaced)).textSelection(.enabled)
+            Text("Opra connects to localhost:11434. Keep Ollama running while reading.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button(manager.isChecking ? "Checking…" : "Check connection & refresh voices") {
+                    Task { await manager.refreshVoices() }
+                }
+                .disabled(manager.isChecking || !OllamaTTSManager.isSupported)
+                if manager.isChecking { ProgressView().controlSize(.small) }
+            }
+            if let message = manager.connectionMessage {
+                Text(message).font(.caption).textSelection(.enabled)
+            }
+            Picker("Voice", selection: Binding(
+                get: { settings.ollamaTTSVoice },
+                set: { settings.setOllamaTTSVoice($0) }
+            )) {
+                ForEach(voices, id: \.self) { Text($0).tag($0) }
+            }
+            HStack {
+                Button("Preview voice") { manager.previewSpeed(settings.speechRate) }
+                    .disabled(manager.isProcessing || manager.isSpeaking || !OllamaTTSManager.isSupported)
+                Button("Stop preview") { manager.stopSpeaking() }
+                    .disabled(!manager.isProcessing && !manager.isSpeaking)
+            }
+            if let error = manager.errorMessage {
+                Text(error).font(.caption).foregroundStyle(.orange)
+            }
+            if !OllamaTTSManager.isSupported {
+                Text("Ollama speech currently requires Apple Silicon. Use System or OpenAI voices on this Mac.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
         }
     }
 }

@@ -119,13 +119,16 @@ final class OpenAITTSManager: ObservableObject, TTSEngine {
         }
 
         let instructions = settingsManager.openAITTSInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": settingsManager.openAITTSModel,
-            "voice": settingsManager.openAITTSVoice,
+            "voice": OpenAISpeechOptions.validVoice(settingsManager.openAITTSVoice, model: settingsManager.openAITTSModel),
             "input": text,
-            "instructions": instructions,
             "response_format": "mp3"
         ]
+
+        if OpenAISpeechOptions.supportsInstructions(settingsManager.openAITTSModel), !instructions.isEmpty {
+            body["instructions"] = instructions
+        }
 
         var request = URLRequest(url: apiURL)
         request.httpMethod = "POST"
@@ -147,31 +150,9 @@ final class OpenAITTSManager: ObservableObject, TTSEngine {
 
     // MARK: - Text processing (OpenAI request char limit)
     private func splitTextForSpeech(_ text: String) -> [AudioPlaybackController.SpeechChunk] {
-        let words = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
-        guard !words.isEmpty else { return [] }
-
-        var chunks: [AudioPlaybackController.SpeechChunk] = []
-        var currentText = ""
-        var currentWordCount = 0
-        var currentStartWordIndex = 0
-
-        for word in words {
-            let candidate = currentText.isEmpty ? word : "\(currentText) \(word)"
-            if candidate.count > maxRequestCharacters, !currentText.isEmpty {
-                chunks.append(.init(text: currentText, startWordIndex: currentStartWordIndex, wordCount: currentWordCount))
-                currentStartWordIndex += currentWordCount
-                currentText = word
-                currentWordCount = 1
-            } else {
-                currentText = candidate
-                currentWordCount += 1
-            }
+        SpeechTextChunker.split(text, limit: maxRequestCharacters).map {
+            .init(text: $0.text, startWordIndex: $0.startWordIndex, wordCount: $0.wordCount)
         }
-
-        if !currentText.isEmpty {
-            chunks.append(.init(text: currentText, startWordIndex: currentStartWordIndex, wordCount: currentWordCount))
-        }
-        return chunks
     }
 
     private func preprocessTextForTTS(_ text: String) -> String {

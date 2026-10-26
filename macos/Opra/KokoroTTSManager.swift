@@ -35,6 +35,8 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
     }
 
     init() {
+        if let saved = UserDefaults.standard.string(forKey: "kokoroTTSVoice"),
+           KokoroModelInstaller.voiceNames.contains(saved) { selectedVoice = saved }
         controller.split = { [weak self] text in self?.split(text) ?? [] }
         controller.produceAudio = { [weak self] chunk in
             guard let self else { throw TTSProduceError(message: "Kokoro engine unavailable.") }
@@ -88,8 +90,10 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
     }
 
     func setVoice(_ name: String) {
+        guard KokoroModelInstaller.voiceNames.contains(name) else { return }
         selectedVoice = name
-        box.invalidateVoice()
+        UserDefaults.standard.set(name, forKey: "kokoroTTSVoice")
+        // The serial inference queue reloads the voice when its name changes.
     }
 
     // MARK: - Helpers
@@ -120,69 +124,9 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
     /// follow-text highlighting stay correct; the passage itself remains one highlighted
     /// document chunk in the reading script.
     private func split(_ text: String) -> [AudioPlaybackController.SpeechChunk] {
-        let maxCharacters = 400
-        var chunks: [AudioPlaybackController.SpeechChunk] = []
-        var buffer = ""
-        var bufferWords = 0
-        var startWordIndex = 0
-
-        func flush() {
-            guard !buffer.isEmpty else { return }
-            chunks.append(.init(text: buffer, startWordIndex: startWordIndex, wordCount: bufferWords))
-            startWordIndex += bufferWords
-            buffer = ""
-            bufferWords = 0
+        SpeechTextChunker.split(text, limit: 400).map {
+            .init(text: $0.text, startWordIndex: $0.startWordIndex, wordCount: $0.wordCount)
         }
-
-        for unit in Self.boundedUnits(text, maxCharacters: maxCharacters) {
-            let words = unit.split(whereSeparator: { $0.isWhitespace }).count
-            if !buffer.isEmpty, buffer.count + 1 + unit.count > maxCharacters { flush() }
-            buffer = buffer.isEmpty ? unit : buffer + " " + unit
-            bufferWords += words
-        }
-        flush()
-        return chunks
-    }
-
-    /// Sentences from `text`, with any sentence longer than `maxCharacters` further
-    /// broken into word groups that fit, so no returned unit exceeds the budget.
-    private static func boundedUnits(_ text: String, maxCharacters: Int) -> [String] {
-        var units: [String] = []
-        for sentence in sentences(in: text) {
-            if sentence.count <= maxCharacters {
-                units.append(sentence)
-            } else {
-                units.append(contentsOf: wordGroups(sentence, maxCharacters: maxCharacters))
-            }
-        }
-        return units
-    }
-
-    private static func sentences(in text: String) -> [String] {
-        var result: [String] = []
-        text.enumerateSubstrings(in: text.startIndex..<text.endIndex,
-                                 options: [.bySentences, .localized]) { sub, _, _, _ in
-            if let s = sub?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
-                result.append(s)
-            }
-        }
-        return result.isEmpty ? [text] : result
-    }
-
-    private static func wordGroups(_ text: String, maxCharacters: Int) -> [String] {
-        var groups: [String] = []
-        var current = ""
-        for word in text.split(whereSeparator: { $0.isWhitespace }).map(String.init) {
-            let candidate = current.isEmpty ? word : current + " " + word
-            if candidate.count > maxCharacters, !current.isEmpty {
-                groups.append(current)
-                current = word
-            } else {
-                current = candidate
-            }
-        }
-        if !current.isEmpty { groups.append(current) }
-        return groups
     }
 
     private func synthesize(_ text: String) async throws -> Data {
@@ -210,12 +154,6 @@ private final class KokoroEngineBox: @unchecked Sendable {
     private var engine: KokoroTTS?
     private var voice: MLXArray?
     private var loadedVoiceName: String?
-    private let lock = NSLock()
-
-    func invalidateVoice() {
-        lock.lock(); voice = nil; loadedVoiceName = nil; lock.unlock()
-    }
-
     func synthesize(text: String, modelURL: URL, voiceURL: URL, voiceName: String) throws -> [Float] {
         if engine == nil {
             engine = KokoroTTS(modelPath: modelURL)

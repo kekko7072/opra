@@ -75,6 +75,11 @@ struct OnboardingView: View {
                 Image(systemName: "cpu").font(.system(size: 56)).foregroundStyle(.tint)
                 Text("Set up on-device Kokoro").font(.title).fontWeight(.bold)
                 kokoroDownload
+            } else if selectedProvider == .ollama {
+                Text("Set up Ollama + Phonon").font(.title).fontWeight(.bold)
+                Text("Install and open Ollama 0.40.11 or later, then run this command in Terminal:")
+                Text("ollama pull phonon").font(.system(.body, design: .monospaced)).textSelection(.enabled)
+                Text("Then choose a voice in Settings → Voices & Providers. Phonon reads English on Apple Silicon Macs.").foregroundStyle(.secondary)
             } else {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 56)).foregroundStyle(.green)
                 Text("You're all set").font(.title).fontWeight(.bold)
@@ -148,7 +153,8 @@ struct OnboardingView: View {
     }
 
     private func onboardingCard(_ provider: TTSProvider) -> some View {
-        let supported = provider != .kokoro || KokoroTTSManager.isSupported
+        let supported = (provider != .kokoro || KokoroTTSManager.isSupported)
+            && (provider != .ollama || OllamaTTSManager.isSupported)
         let isSelected = selectedProvider == provider
         return HStack(spacing: 12) {
             Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
