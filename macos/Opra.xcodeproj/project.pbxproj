@@ -45,6 +45,10 @@
 		FEF4440000000000000000A2 /* LibraryFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF4440000000000000000A1 /* LibraryFolder.swift */; };
 		FEF5550000000000000000A2 /* OpraTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF5550000000000000000A1 /* OpraTips.swift */; };
 		FEF6660000000000000000A2 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF6660000000000000000A1 /* OnboardingView.swift */; };
+		FAC000000000000000000002 /* OllamaSpeechClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000001 /* OllamaSpeechClient.swift */; };
+		FAC000000000000000000012 /* OllamaTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000011 /* OllamaTTSManager.swift */; };
+		FAC000000000000000000022 /* SpeechTextChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000021 /* SpeechTextChunker.swift */; };
+		FAC000000000000000000032 /* OpenAISpeechOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000031 /* OpenAISpeechOptions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +88,10 @@
 		FEF4440000000000000000A1 /* LibraryFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryFolder.swift; sourceTree = "<group>"; };
 		FEF5550000000000000000A1 /* OpraTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpraTips.swift; sourceTree = "<group>"; };
 		FEF6660000000000000000A1 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		FAC000000000000000000001 /* OllamaSpeechClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSpeechClient.swift; sourceTree = "<group>"; };
+		FAC000000000000000000011 /* OllamaTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTTSManager.swift; sourceTree = "<group>"; };
+		FAC000000000000000000021 /* SpeechTextChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTextChunker.swift; sourceTree = "<group>"; };
+		FAC000000000000000000031 /* OpenAISpeechOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISpeechOptions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +140,10 @@
 				A1234567890ABCDEF1234566 /* OpraApp.swift */,
 				A1234567890ABCDEF1234568 /* ContentView.swift */,
 				BF3C9B352E9BF95900E3DD44 /* Views */,
+				FAC000000000000000000001 /* OllamaSpeechClient.swift */,
+				FAC000000000000000000011 /* OllamaTTSManager.swift */,
+				FAC000000000000000000021 /* SpeechTextChunker.swift */,
+				FAC000000000000000000031 /* OpenAISpeechOptions.swift */,
 				BF2A6E002EAB100000000001 /* OpenAITTSManager.swift */,
 				A1234567890ABCDEF123456F /* PDFTextExtractor.swift */,
 				A1234567890ABCDEF1234571 /* TextToSpeechManager.swift */,
@@ -279,6 +291,10 @@
 				BF3C9B392E9BF98700E3DD44 /* SettingsView.swift in Sources */,
 				BFEB1A4A2E9BDD1300FBE98D /* SettingsManager.swift in Sources */,
 				A1234567890ABCDEF1234570 /* PDFTextExtractor.swift in Sources */,
+				FAC000000000000000000002 /* OllamaSpeechClient.swift in Sources */,
+				FAC000000000000000000012 /* OllamaTTSManager.swift in Sources */,
+				FAC000000000000000000022 /* SpeechTextChunker.swift in Sources */,
+				FAC000000000000000000032 /* OpenAISpeechOptions.swift in Sources */,
 				BF2A6E012EAB100000000001 /* OpenAITTSManager.swift in Sources */,
 				BF3C9B3F2E9BF9DD00E3DD44 /* VoicePickerView.swift in Sources */,
 				BF12B9422E9BE461006C1D92 /* TTSProviderManager.swift in Sources */,
@@ -546,7 +562,7 @@
 			repositoryURL = "https://github.com/mlalma/kokoro-ios";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 1.0.11;
 			};
 		};
 		FED0000000000000000000A2 /* XCRemoteSwiftPackageReference "Sparkle" */ = {

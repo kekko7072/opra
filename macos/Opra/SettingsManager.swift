@@ -21,6 +21,7 @@ class SettingsManager: ObservableObject {
     @Published var openAITTSModel: String = "gpt-4o-mini-tts"
     @Published var openAITTSVoice: String = "marin"
     @Published var openAITTSInstructions: String = "Read clearly with a natural, warm audiobook tone."
+    @Published var ollamaTTSVoice: String = "default"
     @Published var hasCompletedOnboarding: Bool = false
 
     private let userDefaults = UserDefaults.standard
@@ -30,10 +31,7 @@ class SettingsManager: ObservableObject {
     }
 
     static let openAITTSModels = ["gpt-4o-mini-tts", "tts-1-hd", "tts-1"]
-    static let openAITTSVoices = [
-        "alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
-        "onyx", "sage", "shimmer", "verse", "marin", "cedar"
-    ]
+    static let openAITTSVoices = OpenAISpeechOptions.voices
 
     init() {
         loadSettings()
@@ -50,11 +48,14 @@ class SettingsManager: ObservableObject {
         openAIAPIKey = loadKeychainValue(account: openAIKeychainAccount) ?? ""
         openAITTSModel = userDefaults.string(forKey: "openAITTSModel") ?? "gpt-4o-mini-tts"
         openAITTSVoice = userDefaults.string(forKey: "openAITTSVoice") ?? "marin"
+        openAITTSVoice = OpenAISpeechOptions.validVoice(openAITTSVoice, model: openAITTSModel)
         openAITTSInstructions = userDefaults.string(forKey: "openAITTSInstructions") ?? "Read clearly with a natural, warm audiobook tone."
+        ollamaTTSVoice = userDefaults.string(forKey: "ollamaTTSVoice") ?? "default"
         hasCompletedOnboarding = userDefaults.bool(forKey: "hasCompletedOnboarding")
     }
 
     func saveSettings() {
+        userDefaults.set(ollamaTTSVoice, forKey: "ollamaTTSVoice")
         userDefaults.set(speechRate, forKey: "speechRate")
         userDefaults.set(selectedVoiceIdentifier, forKey: "selectedVoiceIdentifier")
         userDefaults.set(autoStartReading, forKey: "autoStartReading")
@@ -109,16 +110,22 @@ class SettingsManager: ObservableObject {
 
     func setOpenAITTSModel(_ model: String) {
         openAITTSModel = model
+        openAITTSVoice = OpenAISpeechOptions.validVoice(openAITTSVoice, model: model)
         saveSettings()
     }
 
     func setOpenAITTSVoice(_ voice: String) {
-        openAITTSVoice = voice
+        openAITTSVoice = OpenAISpeechOptions.validVoice(voice, model: openAITTSModel)
         saveSettings()
     }
 
     func setOpenAITTSInstructions(_ instructions: String) {
         openAITTSInstructions = instructions
+        saveSettings()
+    }
+
+    func setOllamaTTSVoice(_ voice: String) {
+        ollamaTTSVoice = voice
         saveSettings()
     }
 

@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>This app uses speech recognition to enable personal voice features for text-to-speech. Personal voice allows you to use your own voice for reading documents, providing a more personalized listening experience. The app does not store or transmit your voice data.</string>
 	<key>NSMicrophoneUsageDescription</key>

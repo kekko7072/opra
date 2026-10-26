@@ -29,6 +29,7 @@ import Speech
     @Published var elapsedTime: TimeInterval = 0.0
 
     private let synthesizer = AVSpeechSynthesizer()
+    private var speechRunID = UUID()
     private var currentUtterance: AVSpeechUtterance?
     private var settingsManager: SettingsManager?
     private var fullText: String = ""
@@ -95,7 +96,9 @@ import Speech
         stopSpeaking()
 
         // Add a longer delay to ensure audio system is fully ready and previous utterance is cleared
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        let runID = speechRunID
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.speechRunID == runID else { return }
             self.performSpeak(text, chunkCompletionHandler: chunkCompletionHandler)
         }
     }
@@ -108,6 +111,7 @@ import Speech
             return
         }
 
+        let runID = speechRunID
         // Preprocess off the main thread to avoid blocking UI
         Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
@@ -121,6 +125,7 @@ import Speech
 
             // Switch back to the main actor to interact with AVSpeechSynthesizer and published properties
             await MainActor.run {
+                guard self.speechRunID == runID else { return }
                 self.fullText = processedText
                 self.words = processedText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
                 self.totalWords = self.words.count
@@ -252,9 +257,9 @@ import Speech
         // Set up chunking state
         self.isChunked = true
         self.chunkedTexts = texts
-        self.currentChunk = startChunk
+        self.currentChunk = max(0, min(startChunk, texts.count - 1))
         self.totalChunks = texts.count
-        self.pdfExtractor?.setCurrentChunk(startChunk)
+        self.pdfExtractor?.setCurrentChunk(currentChunk)
 
         print("Chunking state set - isChunked: \(isChunked), totalChunks: \(totalChunks)")
         print("Chunked texts count: \(chunkedTexts.count)")
@@ -394,6 +399,7 @@ import Speech
     }
 
     func stopSpeaking() {
+        speechRunID = UUID()
         print("TTS Debug - Stopping speech, current utterance: \(currentUtterance != nil)")
 
         // Cancel all timers first
@@ -754,6 +760,7 @@ import Speech
 
 @MainActor extension TextToSpeechManager: @preconcurrency AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        guard currentUtterance === utterance else { return }
         print("Speech synthesizer did start utterance")
         print("Utterance speech string length: \(utterance.speechString.count)")
         print("Utterance speech string preview: \(String(utterance.speechString.prefix(100)))")
@@ -770,6 +777,7 @@ import Speech
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didPause utterance: AVSpeechUtterance) {
+        guard currentUtterance === utterance else { return }
         self.isPaused = true
         // Record the time when paused
         if let startDate = self.utteranceStartDate {
@@ -778,6 +786,7 @@ import Speech
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didContinue utterance: AVSpeechUtterance) {
+        guard currentUtterance === utterance else { return }
         self.isPaused = false
         // Add the paused time to total paused time
         self.totalPausedTime += self.pausedTime
@@ -785,6 +794,7 @@ import Speech
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        guard currentUtterance === utterance else { return }
         print("Speech synthesizer did finish utterance")
         print("Current chunk completion handler: \(self.chunkCompletionHandler != nil)")
         print("Is chunked: \(self.isChunked)")
@@ -795,19 +805,6 @@ import Speech
         print("Total words: \(self.totalWords), Current word index: \(self.currentWordIndex)")
         print("Current utterance reference: \(self.currentUtterance != nil)")
         print("Utterance identity match: \(self.currentUtterance === utterance)")
-
-        // Check if this is the current utterance or if we should process it anyway
-        let isCurrentUtterance = self.currentUtterance === utterance
-        let hasCompletionHandler = self.chunkCompletionHandler != nil
-
-        print("Processing didFinish - isCurrent: \(isCurrentUtterance), hasHandler: \(hasCompletionHandler)")
-
-        // Process completion if this is the current utterance OR if we have a completion handler
-        // (in case of race conditions where utterance reference was cleared)
-        guard isCurrentUtterance || hasCompletionHandler else {
-            print("Ignoring didFinish - not current utterance and no completion handler")
-            return
-        }
 
         self.currentUtterance = nil
         self.progressTimer?.cancel()
@@ -825,6 +822,7 @@ import Speech
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        guard currentUtterance === utterance else { return }
         print("Speech synthesizer did cancel utterance")
         print("Current chunk completion handler: \(self.chunkCompletionHandler != nil)")
         print("Is chunked: \(self.isChunked)")

@@ -16,6 +16,7 @@ enum TTSProvider: String, CaseIterable, Identifiable {
     case system = "System TTS"
     case openAI = "OpenAI TTS"
     case kokoro = "Kokoro (On-Device)"
+    case ollama = "Ollama (Phonon)"
 
     var id: String { rawValue }
 
@@ -25,6 +26,7 @@ enum TTSProvider: String, CaseIterable, Identifiable {
         case .system: return "System"
         case .openAI: return "OpenAI"
         case .kokoro: return "Kokoro"
+        case .ollama: return "Ollama"
         }
     }
 
@@ -34,6 +36,8 @@ enum TTSProvider: String, CaseIterable, Identifiable {
             return "Uses macOS built-in text-to-speech voices"
         case .openAI:
             return "Uses OpenAI's latest speech model for higher-quality generated voices"
+        case .ollama:
+            return "Reads with Phonon through Ollama on this Mac (Apple Silicon; separate setup required)"
         case .kokoro:
             return "Runs the open-source Kokoro neural voice fully on your Mac — no internet required"
         }
@@ -46,7 +50,7 @@ enum TTSProvider: String, CaseIterable, Identifiable {
         switch self {
         case .system: return .builtIn
         case .openAI: return .cloud
-        case .kokoro: return .onDevice
+        case .kokoro, .ollama: return .onDevice
         }
     }
 }

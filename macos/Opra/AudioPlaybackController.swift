@@ -140,6 +140,7 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
 
     /// Surface a pre-flight error (e.g. provider not configured) without starting playback.
     func fail(_ message: String) {
+        stop()
         finishWithError(message)
     }
 
@@ -312,6 +313,7 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
     // MARK: - AVAudioPlayerDelegate
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
+            guard self.audioPlayer === player else { return }
             let runID = activeRunID
             if flag {
                 handleAudioFinished(runID: runID)
@@ -323,6 +325,7 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor in
+            guard self.audioPlayer === player else { return }
             finishWithError("Audio playback error: \(error?.localizedDescription ?? "Unknown error")")
         }
     }

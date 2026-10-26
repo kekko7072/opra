@@ -19,6 +19,9 @@ jobs:
       with:
         xcode-version: latest-stable
 
+    - name: Test speech integration (offline)
+      run: bash scripts/test-speech.sh
+
     - name: Build macOS
       run: |
         cd macos
