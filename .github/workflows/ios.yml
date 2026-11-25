@@ -1,0 +1,20 @@
+name: Build iOS
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', 'macos/Opra/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['ios/**', 'macos/Opra/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Build physical device target
+        run: xcodebuild -project ios/Opra.xcodeproj -scheme Opra -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build-ios CODE_SIGNING_ALLOWED=NO build
+      - name: Build simulator reader
+        run: xcodebuild -project ios/Opra.xcodeproj -scheme 'Opra Simulator' -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-simulator CODE_SIGNING_ALLOWED=NO build

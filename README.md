@@ -4,7 +4,7 @@
 
 ![Video Demo](./app-recording.gif)
 
-Opra reads PDF documents aloud using AI-powered text-to-speech. **The macOS app is the actively developed product.** A Windows port exists as a scaffold but is **not yet shipping** — see the [Roadmap / TODO](#roadmap--todo).
+Opra reads PDF documents aloud using AI-powered text-to-speech. **The macOS app is the actively developed product.** An iPhone/iPad target is available in [`ios/`](ios/README.md) for development and device testing. A Windows port exists as a scaffold but is **not yet shipping** — see the [Roadmap / TODO](#roadmap--todo).
 
 ## How it works
 
@@ -36,6 +36,8 @@ PDF → Extract Text → AI Speech → Audio Playback
 - **Follow-along highlighting** and page sync while it reads
 - **Speed control**, progress tracking, and resume where you left off
 - **Library** with folders, thumbnails, and persistent reading state (SwiftData)
+- **Audio export** to WAV (Kokoro/Ollama) or MP3 (OpenAI)
+- **Local MCP server** — opt-in authenticated localhost endpoint for text-to-audio conversion; see [connection instructions](docs/local-mcp.md)
 - **Automatic updates** via Sparkle
 
 ## Voice Quality Options
@@ -103,13 +105,13 @@ open Opra.xcodeproj
 
 ## Releasing (macOS)
 
-Releases are produced by the `Build and Release` GitHub Actions workflow, which builds, code-signs, notarizes, and publishes a `.dmg` + `.app.zip` whenever a version bump lands on `main`. Use the helper script to cut one:
+Releases are produced by the `Build and Release` GitHub Actions workflow, which builds, code-signs, notarizes, and publishes a `.dmg` + `.app.zip` when a `vX.Y.Z-buildN` release tag is pushed. Use the helper script to cut one:
 
 ```bash
 ./release.sh            # prompts for the new version (and build) number, then pushes
 ```
 
-The script bumps `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project, commits the bump, and pushes to `main` to trigger the release.
+The script bumps `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in the Xcode project, commits the bump, and pushes the commit and release tag atomically to trigger the release. Commit feature changes before using the helper.
 
 ## Roadmap / TODO
 

@@ -1,3 +1,4 @@
+#if !OPRA_SIMULATOR
 //
 //  KokoroTTSManager.swift
 //  Opra
@@ -201,3 +202,48 @@ private final class KokoroEngineBox: @unchecked Sendable {
         return samples
     }
 }
+
+#else
+import Foundation
+import Combine
+
+/// The upstream MLX binary cannot link against the simulator Metal SDK. This
+/// explicit simulator-only engine reports that limitation without falling back.
+@MainActor
+final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine, AudioExportingEngine {
+    static let isSupported = false
+    let provider: TTSProvider = .kokoro
+    let installer = KokoroModelInstaller()
+    @Published var selectedVoice = "af_heart"
+    @Published var errorMessage: String?
+    var isSpeaking: Bool { false }
+    var isPaused: Bool { false }
+    var isProcessing: Bool { false }
+    var isPrefetching: Bool { false }
+    var readingProgress: Double { 0 }
+    var currentWordIndex: Int { 0 }
+    var totalWords: Int { 0 }
+    var elapsedTime: TimeInterval { 0 }
+    var speechRate: Float { 0.5 }
+    var currentChunkIndex: Int { 0 }
+    var installState: ModelInstallState { .notInstalled }
+    var isReady: Bool { false }
+    var exportFileExtension: String { "wav" }
+    var exportFormatName: String { "WAV Audio" }
+    func setSettingsManager(_ settings: SettingsManager) {}
+    func setPDFExtractor(_ extractor: PDFTextExtractor) {}
+    func speak(_ text: String) { errorMessage = "Kokoro requires a physical iPhone or iPad. Choose System, OpenAI, or Ollama in the simulator." }
+    func speakChunkedText(_ texts: [String], startChunk: Int) { speak("") }
+    func pauseSpeaking() {}
+    func resumeSpeaking() {}
+    func stopSpeaking() {}
+    func setSpeechRate(_ rate: Float) {}
+    func previewSpeed(_ rate: Float) { speak("") }
+    func ensureModelInstalled() { speak("") }
+    func cancelInstall() {}
+    func setVoice(_ name: String) { selectedVoice = name }
+    func exportAudio(_ texts: [String], to url: URL, progress: @escaping @MainActor (Double) -> Void) async throws {
+        throw TTSProduceError(message: "Kokoro requires a physical device.")
+    }
+}
+#endif
