@@ -19,6 +19,7 @@ struct SettingsView: View {
     enum Pane: String, CaseIterable, Identifiable {
         case general = "General"
         case voices = "Voices & Providers"
+        case server = "MCP Server"
         case updates = "Updates"
         case about = "About"
         var id: String { rawValue }
@@ -26,6 +27,7 @@ struct SettingsView: View {
             switch self {
             case .general: return "slider.horizontal.3"
             case .voices: return "person.wave.2"
+            case .server: return "network"
             case .updates: return "arrow.down.circle"
             case .about: return "info.circle"
             }
@@ -72,6 +74,7 @@ struct SettingsView: View {
         switch pane {
         case .general: GeneralPane(settingsManager: settingsManager, ttsProviderManager: ttsProviderManager)
         case .voices: VoicesPane(settingsManager: settingsManager, ttsProviderManager: ttsProviderManager)
+        case .server: MCPServerPane(settings: settingsManager)
         case .updates: UpdatesPane()
         case .about: AboutPane()
         }
@@ -445,5 +448,39 @@ private struct SettingsSection<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+
+private struct MCPServerPane: View {
+    let settings: SettingsManager
+    @ObservedObject private var server = LocalMCPServer.shared
+    @State private var port = "8765"
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Connect local AI tools to Opra").font(.headline)
+            Text("Convert text to audio with Kokoro, Ollama, or OpenAI using your configured voices. OpenAI requests use your API key and may incur charges.")
+            TextField("Port", text: $port).disabled(server.isRunning)
+            HStack {
+                Button(server.isRunning ? "Stop server" : "Start server") {
+                    if server.isRunning { server.stop() }
+                    else if let value = UInt16(port), value > 0 { server.start(settings: settings, port: value) }
+                }.buttonStyle(.borderedProminent)
+                Text(server.status).font(.caption)
+            }
+            if server.isRunning {
+                Text(server.endpoint).textSelection(.enabled).font(.system(.body, design: .monospaced))
+                Text("Authorization: Bearer " + server.token).textSelection(.enabled).font(.system(.caption, design: .monospaced))
+                Button("Copy connection configuration") {
+                    let config: [String: Any] = ["mcpServers": ["opra": ["url": server.endpoint, "headers": ["Authorization": "Bearer " + server.token]]]]
+                    if let data = try? JSONSerialization.data(withJSONObject: config, options: [.prettyPrinted, .sortedKeys]),
+                       let text = String(data: data, encoding: .utf8) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(text, forType: .string)
+                    }
+                }
+            }
+            Text("Keep Opra open. Only connections from this Mac are accepted. The token changes each time you start the server; stopping cancels jobs and removes temporary audio. Copy completed exports before stopping.").font(.caption).foregroundStyle(.secondary)
+        }
     }
 }

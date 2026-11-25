@@ -28,6 +28,7 @@
 		FE44440000000000000000D2 /* DocumentImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE44440000000000000000D1 /* DocumentImporter.swift */; };
 		FE55550000000000000000E2 /* Passage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE55550000000000000000E1 /* Passage.swift */; };
 		FE66660000000000000000F2 /* PassageSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE66660000000000000000F1 /* PassageSegmenter.swift */; };
+		FE66660000000000000000F4 /* PDFTextNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE66660000000000000000F3 /* PDFTextNormalizer.swift */; };
 		FE77770000000000000000A2 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE77770000000000000000A1 /* ReaderViewModel.swift */; };
 		FE88880000000000000000A2 /* LibrarySidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE88880000000000000000A1 /* LibrarySidebarView.swift */; };
 		FE99990000000000000000A2 /* ReadingScriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE99990000000000000000A1 /* ReadingScriptView.swift */; };
@@ -49,6 +50,7 @@
 		FAC000000000000000000012 /* OllamaTTSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000011 /* OllamaTTSManager.swift */; };
 		FAC000000000000000000022 /* SpeechTextChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000021 /* SpeechTextChunker.swift */; };
 		FAC000000000000000000032 /* OpenAISpeechOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC000000000000000000031 /* OpenAISpeechOptions.swift */; };
+		FAC111111111111111111112 /* LocalMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC111111111111111111111 /* LocalMCPServer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +78,7 @@
 		FE44440000000000000000D1 /* DocumentImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImporter.swift; sourceTree = "<group>"; };
 		FE55550000000000000000E1 /* Passage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Passage.swift; sourceTree = "<group>"; };
 		FE66660000000000000000F1 /* PassageSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassageSegmenter.swift; sourceTree = "<group>"; };
+		FE66660000000000000000F3 /* PDFTextNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextNormalizer.swift; sourceTree = "<group>"; };
 		FE77770000000000000000A1 /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
 		FE88880000000000000000A1 /* LibrarySidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySidebarView.swift; sourceTree = "<group>"; };
 		FE99990000000000000000A1 /* ReadingScriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingScriptView.swift; sourceTree = "<group>"; };
@@ -92,6 +95,7 @@
 		FAC000000000000000000011 /* OllamaTTSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTTSManager.swift; sourceTree = "<group>"; };
 		FAC000000000000000000021 /* SpeechTextChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTextChunker.swift; sourceTree = "<group>"; };
 		FAC000000000000000000031 /* OpenAISpeechOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISpeechOptions.swift; sourceTree = "<group>"; };
+		FAC111111111111111111111 /* LocalMCPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMCPServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +140,7 @@
 		A1234567890ABCDEF123455A /* Opra */ = {
 			isa = PBXGroup;
 			children = (
+				FAC111111111111111111111 /* LocalMCPServer.swift */,
 				A1234567890ABCDEF1234565 /* Info.plist */,
 				A1234567890ABCDEF1234566 /* OpraApp.swift */,
 				A1234567890ABCDEF1234568 /* ContentView.swift */,
@@ -155,6 +160,7 @@
 				FE44440000000000000000D1 /* DocumentImporter.swift */,
 				FE55550000000000000000E1 /* Passage.swift */,
 				FE66660000000000000000F1 /* PassageSegmenter.swift */,
+				FE66660000000000000000F3 /* PDFTextNormalizer.swift */,
 				FE77770000000000000000A1 /* ReaderViewModel.swift */,
 				FECCCC0000000000000000A1 /* UpdaterController.swift */,
 				FEF1110000000000000000A1 /* AudioWAV.swift */,
@@ -286,6 +292,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FAC111111111111111111112 /* LocalMCPServer.swift in Sources */,
 				A1234567890ABCDEF1234569 /* ContentView.swift in Sources */,
 				BF3C9B3B2E9BF9C000E3DD44 /* PDFViewerView.swift in Sources */,
 				BF3C9B392E9BF98700E3DD44 /* SettingsView.swift in Sources */,
@@ -305,6 +312,7 @@
 				FE44440000000000000000D2 /* DocumentImporter.swift in Sources */,
 				FE55550000000000000000E2 /* Passage.swift in Sources */,
 				FE66660000000000000000F2 /* PassageSegmenter.swift in Sources */,
+				FE66660000000000000000F4 /* PDFTextNormalizer.swift in Sources */,
 				FE77770000000000000000A2 /* ReaderViewModel.swift in Sources */,
 				FECCCC0000000000000000A2 /* UpdaterController.swift in Sources */,
 				FEF1110000000000000000A2 /* AudioWAV.swift in Sources */,
@@ -459,7 +467,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Opra/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -483,7 +491,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.2.2;
+				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = francesco.vezzani.opra;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -501,7 +509,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Opra/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -525,7 +533,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.2.2;
+				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = francesco.vezzani.opra;
 				PRODUCT_NAME = Opra;
 				SWIFT_EMIT_LOC_STRINGS = YES;

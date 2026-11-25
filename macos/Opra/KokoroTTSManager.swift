@@ -13,9 +13,12 @@ import AVFoundation
 import Combine
 import KokoroSwift
 import MLX
+#if os(iOS)
+import UIKit
+#endif
 
 @MainActor
-final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
+final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine, AudioExportingEngine {
     let provider: TTSProvider = .kokoro
 
     let installer = KokoroModelInstaller()
@@ -23,11 +26,11 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
 
     private let controller = AudioPlaybackController()
     private let box = KokoroEngineBox()
-    private let inferenceQueue = DispatchQueue(label: "opra.kokoro.inference", qos: .userInitiated)
+    private static let inferenceQueue = DispatchQueue(label: "opra.kokoro.inference", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
 
     static var isSupported: Bool {
-        #if arch(arm64)
+        #if arch(arm64) && !targetEnvironment(simulator)
         return true
         #else
         return false
@@ -50,6 +53,7 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
     var isSpeaking: Bool { controller.isSpeaking }
     var isPaused: Bool { controller.isPaused }
     var isProcessing: Bool { controller.isProcessing }
+    var isPrefetching: Bool { controller.isPrefetching }
     var errorMessage: String? { controller.errorMessage }
     var readingProgress: Double { controller.readingProgress }
     var currentWordIndex: Int { controller.currentWordIndex }
@@ -96,10 +100,32 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
         // The serial inference queue reloads the voice when its name changes.
     }
 
+    var exportFileExtension: String { "wav" }
+    var exportFormatName: String { "WAV Audio" }
+
+    func exportAudio(_ texts: [String], to url: URL, progress: @escaping @MainActor (Double) -> Void) async throws {
+        guard ensureReady() else { throw TTSProduceError(message: "The Kokoro voice is not ready.") }
+        let chunks = texts.flatMap(split)
+        guard !chunks.isEmpty else { throw TTSProduceError(message: "There is no text to export.") }
+        let writer = try PCM16WAVFileWriter(url: url)
+        do {
+            for (index, chunk) in chunks.enumerated() {
+                try Task.checkCancellation()
+                let wav = try await synthesize(chunk.text)
+                try writer.append(wav: wav)
+                progress(Double(index + 1) / Double(chunks.count))
+            }
+            try writer.finish()
+        } catch {
+            writer.cancel()
+            throw error
+        }
+    }
+
     // MARK: - Helpers
     private func ensureReady() -> Bool {
         guard Self.isSupported else {
-            controller.fail("On-device Kokoro requires an Apple Silicon Mac.")
+            controller.fail("On-device Kokoro requires a supported physical Apple Silicon device.")
             return false
         }
         switch installer.state {
@@ -130,12 +156,17 @@ final class KokoroTTSManager: ObservableObject, TTSEngine, InstallableEngine {
     }
 
     private func synthesize(_ text: String) async throws -> Data {
+        #if os(iOS)
+        guard UIApplication.shared.applicationState == .active else {
+            throw TTSProduceError(message: "Keep Opra open while generating Kokoro audio.")
+        }
+        #endif
         let modelURL = installer.modelURL
         let voiceURL = installer.voiceURL(selectedVoice)
         let voiceName = selectedVoice
         let box = self.box
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
-            inferenceQueue.async {
+            Self.inferenceQueue.async {
                 do {
                     let samples = try box.synthesize(text: text, modelURL: modelURL,
                                                      voiceURL: voiceURL, voiceName: voiceName)

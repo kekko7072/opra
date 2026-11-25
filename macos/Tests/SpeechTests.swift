@@ -33,8 +33,37 @@ struct SpeechTests {
         try testChunks()
         try testWAV()
         try testModelOptions()
+        try testPDFTextNormalization()
         try await testOllama()
         print("PASS: speech chunking, WAV, model compatibility and Ollama HTTP regression tests")
+    }
+
+    static func testPDFTextNormalization() throws {
+        let broken = "Two mainenvironmentshasbeendetected."
+        var x: CGFloat = 0
+        var boxes: [CGRect] = []
+        let wordStarts = Set([8, 20, 23, 27])
+        for index in 0..<(broken as NSString).length {
+            if wordStarts.contains(index) { x += 3 }
+            boxes.append(CGRect(x: x, y: 0, width: 5, height: 12))
+            x += 5
+        }
+        let repaired = PDFTextNormalizer.repairMissingSpaces(in: broken, bounds: boxes)
+        try expect(repaired == "Two main environments has been detected.", "Visual word gaps restore missing PDF spaces")
+
+        let wrapped = "calendar-ageing plateau, and train-\ning before it can leave"
+        try expect(
+            PDFTextNormalizer.normalize(wrapped) == "calendar-ageing plateau, and training before it can leave",
+            "Line-break hyphens are removed without damaging semantic hyphens"
+        )
+        try expect(PDFTextNormalizer.isPageFolio(" v "), "Roman front-matter folio is skipped")
+        try expect(PDFTextNormalizer.isPageFolio("42"), "Numeric folio is skipped")
+        try expect(!PDFTextNormalizer.isPageFolio("Abstract"), "Real page content is retained")
+        try expect(PDFTextNormalizer.normalize("Abstract\n\n1.1  A battery").contains("\n\n"), "Heading spacing is retained as a paragraph boundary")
+        try expect(PDFTextNormalizer.normalize("Footnote text\ncontinues here") == "Footnote text continues here", "Single visual line breaks separate words")
+        let punctuation = "state_of_charge is 99–100 %, it’s ready. calendar-ageing"
+        try expect(PDFTextNormalizer.normalize(punctuation) == punctuation, "Underscores, punctuation, apostrophes, and semantic dashes are preserved")
+        try expect(PDFTextNormalizer.normalize("First thought—\nsecond thought.") == "First thought—\nsecond thought.", "Sentence dashes survive PDF line wrapping")
     }
 
     static func testChunks() throws {
@@ -75,6 +104,20 @@ struct SpeechTests {
         try expect(wav.suffix(6) == pcm, "PCM bytes preserved exactly")
         let kokoro = AudioWAV.data(fromMonoFloat: [0, 1, -1], sampleRate: 24_000)
         try expect(kokoro.count == 50, "Existing Kokoro WAV conversion preserved")
+
+        let exportURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("opra-audio-export-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: exportURL) }
+        let writer = try PCM16WAVFileWriter(url: exportURL)
+        try writer.append(wav: wav)
+        try writer.append(wav: wav)
+        try writer.finish()
+        let combined = try Data(contentsOf: exportURL)
+        try expect(combined.count == 56, "WAV export streams chunks without duplicate headers")
+        func combinedU32(_ offset: Int) -> UInt32 {
+            (0..<4).reduce(0) { $0 | UInt32(combined[offset + $1]) << ($1 * 8) }
+        }
+        try expect(combinedU32(4) == 48 && combinedU32(40) == 12, "WAV export finalizes finite header lengths")
     }
 
     static func testModelOptions() throws {

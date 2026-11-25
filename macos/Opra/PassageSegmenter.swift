@@ -17,20 +17,22 @@ enum PassageSegmenter {
         var result: [Passage] = []
         var nextID = 0
         for pageIndex in 0..<pdf.pageCount {
-            guard let page = pdf.page(at: pageIndex), let raw = page.string else { continue }
-            let text = normalize(raw)
+            guard let page = pdf.page(at: pageIndex) else { continue }
+            let reconstructed = PDFTextNormalizer.text(from: page)
+            let text = PDFTextNormalizer.excludingPageFurniture(from: page, text: reconstructed)
             guard !text.isEmpty else { continue }
-            result.append(Passage(id: nextID, text: text, pageNumber: pageIndex + 1))
-            nextID += 1
+
+            // Keep headings and body paragraphs distinct. Preserve page mapping
+            // for navigation while allowing screen readers/TTS to pause naturally.
+            let blocks = text.components(separatedBy: "\n\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            for block in blocks {
+                result.append(Passage(id: nextID, text: block, pageNumber: pageIndex + 1))
+                nextID += 1
+            }
         }
         return result
     }
 
-    private static func normalize(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "-\n", with: "")     // join hyphenated line breaks
-            .replacingOccurrences(of: "\n", with: " ")
-            .replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 }

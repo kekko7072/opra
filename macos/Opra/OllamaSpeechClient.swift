@@ -13,9 +13,12 @@ struct OllamaSpeechClient {
     static let model = "phonon"
     static let minimumVersion = "0.40.11"
     private let session: URLSession
-    private let baseURL = URL(string: "http://localhost:11434")!
+    private let baseURL: URL
 
-    init(session: URLSession = .shared) { self.session = session }
+    init(session: URLSession = .shared, baseURL: URL = URL(string: "http://localhost:11434")!) {
+        self.session = session
+        self.baseURL = baseURL
+    }
 
     func voices() async throws -> [String] {
         struct Version: Decodable { let version: String }
@@ -94,7 +97,7 @@ struct OllamaSpeechClient {
             if error.code == .timedOut {
                 throw OllamaSpeechError(message: "Ollama took too long to respond. Check that Phonon is installed and try again.")
             }
-            throw OllamaSpeechError(message: "Cannot connect to Ollama at localhost:11434. Open Ollama on this Mac and try again.")
+            throw OllamaSpeechError(message: "Cannot connect to Ollama at \(baseURL.host ?? "the configured server"). Open Ollama on the host Mac and check that it is reachable.")
         }
     }
 

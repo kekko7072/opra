@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 import Security
+import Combine
 
 class SettingsManager: ObservableObject {
     @Published var speechRate: Float = 0.5
@@ -21,6 +22,7 @@ class SettingsManager: ObservableObject {
     @Published var openAITTSModel: String = "gpt-4o-mini-tts"
     @Published var openAITTSVoice: String = "marin"
     @Published var openAITTSInstructions: String = "Read clearly with a natural, warm audiobook tone."
+    @Published var ollamaServerURL: String = "http://localhost:11434"
     @Published var ollamaTTSVoice: String = "default"
     @Published var hasCompletedOnboarding: Bool = false
 
@@ -50,11 +52,13 @@ class SettingsManager: ObservableObject {
         openAITTSVoice = userDefaults.string(forKey: "openAITTSVoice") ?? "marin"
         openAITTSVoice = OpenAISpeechOptions.validVoice(openAITTSVoice, model: openAITTSModel)
         openAITTSInstructions = userDefaults.string(forKey: "openAITTSInstructions") ?? "Read clearly with a natural, warm audiobook tone."
+        ollamaServerURL = userDefaults.string(forKey: "ollamaServerURL") ?? "http://localhost:11434"
         ollamaTTSVoice = userDefaults.string(forKey: "ollamaTTSVoice") ?? "default"
         hasCompletedOnboarding = userDefaults.bool(forKey: "hasCompletedOnboarding")
     }
 
     func saveSettings() {
+        userDefaults.set(ollamaServerURL, forKey: "ollamaServerURL")
         userDefaults.set(ollamaTTSVoice, forKey: "ollamaTTSVoice")
         userDefaults.set(speechRate, forKey: "speechRate")
         userDefaults.set(selectedVoiceIdentifier, forKey: "selectedVoiceIdentifier")

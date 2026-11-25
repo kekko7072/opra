@@ -8,6 +8,8 @@ swiftc -swift-version 5 -parse-as-library \
   macos/Opra/SpeechTextChunker.swift \
   macos/Opra/OpenAISpeechOptions.swift \
   macos/Opra/OllamaSpeechClient.swift \
+  macos/Opra/PDFTextNormalizer.swift \
   macos/Tests/SpeechTests.swift \
+  -framework PDFKit \
   -o "$test_dir/speech-tests"
 "$test_dir/speech-tests"

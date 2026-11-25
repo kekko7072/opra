@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 @MainActor
-final class OllamaTTSManager: ObservableObject, TTSEngine {
+final class OllamaTTSManager: ObservableObject, TTSEngine, AudioExportingEngine {
     let provider: TTSProvider = .ollama
     @Published private(set) var availableVoices = ["default"]
     @Published private(set) var isChecking = false
@@ -17,7 +17,13 @@ final class OllamaTTSManager: ObservableObject, TTSEngine {
     }
 
     private let controller = AudioPlaybackController()
-    private let client = OllamaSpeechClient()
+    private var client: OllamaSpeechClient {
+        #if os(iOS)
+        return OllamaSpeechClient(baseURL: URL(string: settings?.ollamaServerURL ?? "") ?? URL(string: "http://localhost:11434")!)
+        #else
+        return OllamaSpeechClient()
+        #endif
+    }
     private weak var settings: SettingsManager?
     private var cancellable: AnyCancellable?
     private var runVoice = "default"
@@ -40,6 +46,7 @@ final class OllamaTTSManager: ObservableObject, TTSEngine {
     var isSpeaking: Bool { controller.isSpeaking }
     var isPaused: Bool { controller.isPaused }
     var isProcessing: Bool { controller.isProcessing }
+    var isPrefetching: Bool { controller.isPrefetching }
     var errorMessage: String? { controller.errorMessage }
     var readingProgress: Double { controller.readingProgress }
     var currentWordIndex: Int { controller.currentWordIndex }
@@ -99,5 +106,32 @@ final class OllamaTTSManager: ObservableObject, TTSEngine {
     func previewSpeed(_ rate: Float) {
         controller.setRate(rate)
         speak("Hello from Opra. This is a preview of your Phonon reading voice.")
+    }
+
+    var exportFileExtension: String { "wav" }
+    var exportFormatName: String { "WAV Audio" }
+
+    func exportAudio(_ texts: [String], to url: URL, progress: @escaping @MainActor (Double) -> Void) async throws {
+        guard Self.isSupported else {
+            throw TTSProduceError(message: "Ollama speech currently requires an Apple Silicon Mac.")
+        }
+        // Export must not interrupt a reading already in progress. Capture the
+        // configured voice for the whole file without resetting the controller.
+        let exportVoice = settings?.ollamaTTSVoice ?? "default"
+        let chunks = texts.flatMap { SpeechTextChunker.split($0) }
+        guard !chunks.isEmpty else { throw TTSProduceError(message: "There is no text to export.") }
+        let writer = try PCM16WAVFileWriter(url: url)
+        do {
+            for (index, chunk) in chunks.enumerated() {
+                try Task.checkCancellation()
+                let wav = try await client.speech(text: chunk.text, voice: exportVoice)
+                try writer.append(wav: wav)
+                progress(Double(index + 1) / Double(chunks.count))
+            }
+            try writer.finish()
+        } catch {
+            writer.cancel()
+            throw error
+        }
     }
 }

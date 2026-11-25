@@ -8,11 +8,13 @@
 import Foundation
 import AVFoundation
 import Speech
+import Combine
 
 @MainActor class TextToSpeechManager: NSObject, ObservableObject, TTSEngine, VoiceSelectingEngine, PersonalVoiceEngine, SSMLCapableEngine {
     // MARK: - TTSEngine conformance (constant for the system synthesizer path)
     let provider: TTSProvider = .system
     var isProcessing: Bool { false }   // System TTS streams immediately; no generation step.
+    var isPrefetching: Bool { false }
     var errorMessage: String? { nil }  // System TTS surfaces issues via console, not user-facing errors.
     var currentChunkIndex: Int { currentChunk }
 

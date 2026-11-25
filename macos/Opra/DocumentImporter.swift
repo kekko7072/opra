@@ -9,7 +9,11 @@
 
 import Foundation
 import PDFKit
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 enum DocumentImporter {
     enum ImportError: LocalizedError {
@@ -74,9 +78,13 @@ enum DocumentImporter {
         let scale = min(maxDimension / box.width, maxDimension / box.height, 2.0)
         let size = CGSize(width: box.width * scale, height: box.height * scale)
         let image = page.thumbnail(of: size, for: .mediaBox)
+        #if os(iOS)
+        return image.pngData()
+        #else
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),
               let png = rep.representation(using: .png, properties: [:]) else { return nil }
         return png
+        #endif
     }
 }

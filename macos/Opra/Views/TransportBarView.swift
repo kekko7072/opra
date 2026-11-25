@@ -10,6 +10,7 @@
 import SwiftUI
 import AVFoundation
 import TipKit
+import UniformTypeIdentifiers
 
 struct TransportBarView: View {
     @ObservedObject var reader: ReaderViewModel
@@ -52,6 +53,16 @@ struct TransportBarView: View {
                 Text(formatTime(tts.elapsedTime)).monospacedDigit()
             }
             .font(.caption).foregroundStyle(.secondary)
+
+            Button(action: exportAudio) {
+                if tts.isExporting {
+                    ProgressView(value: tts.exportProgress).frame(width: 44)
+                } else {
+                    Image(systemName: "square.and.arrow.down")
+                }
+            }
+            .help(tts.canExportAudio ? "Export the full reading as (tts.exportFormatName)" : "Choose a neural voice to export audio")
+            .disabled(!tts.canExportAudio || tts.isExporting || reader.queue.isEmpty)
 
             HStack(spacing: 8) {
                 Slider(value: Binding(
@@ -127,7 +138,7 @@ struct TransportBarView: View {
                     EmptyView()
                 }
             }
-        } else if let error = tts.errorMessage {
+        } else if let error = tts.exportError ?? tts.errorMessage {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                 Text(error).font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -136,6 +147,21 @@ struct TransportBarView: View {
             HStack(spacing: 8) {
                 ProgressView().scaleEffect(0.6).frame(width: 16, height: 16)
                 Text("Generating speech…").font(.caption).foregroundStyle(.secondary)
+            }
+        } else if tts.isSpeaking && tts.isPaused && tts.isPrefetching {
+            Label("Reading paused · background generation stopped", systemImage: "pause.circle")
+                .font(.caption).foregroundStyle(.secondary)
+        } else if tts.isSpeaking && tts.isPaused {
+            Label("Reading paused", systemImage: "pause.circle")
+                .font(.caption).foregroundStyle(.secondary)
+        } else if tts.isSpeaking && tts.isPrefetching {
+            VStack(spacing: 5) {
+                ProgressView(value: progress).tint(.accentColor)
+                HStack(spacing: 6) {
+                    Image(systemName: "waveform.badge.plus")
+                    Text("Playing now · preparing the next audio in the background")
+                }
+                .font(.caption2).foregroundStyle(.secondary)
             }
         } else if reader.isLoading {
             HStack(spacing: 8) {
@@ -184,6 +210,22 @@ struct TransportBarView: View {
     private func formatTime(_ t: TimeInterval) -> String {
         String(format: "%02d:%02d", Int(t) / 60, Int(t) % 60)
     }
+
+    private func exportAudio() {
+        let panel = NSSavePanel()
+        let fileExtension = tts.exportFileExtension
+        panel.title = "Export Full Reading"
+        panel.nameFieldStringValue = sanitizedFilename(reader.document?.title ?? "Opra Reading") + "." + fileExtension
+        if let type = UTType(filenameExtension: fileExtension) { panel.allowedContentTypes = [type] }
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        Task { await tts.exportAudio(reader.queue.map(\.text), to: url) }
+    }
+
+    private func sanitizedFilename(_ value: String) -> String {
+        value.replacingOccurrences(of: "[/:]", with: "-", options: .regularExpression)
+    }
+
 }
 
 private struct VoiceQuickPicker: View {

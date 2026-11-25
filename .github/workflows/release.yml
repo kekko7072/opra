@@ -2,10 +2,9 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - appcast.xml
+    tags:
+      - 'v*.*.*-build*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -110,7 +109,24 @@ jobs:
         rm certificate.p12
         
         echo "Certificate imported successfully"
+
+    - name: Validate release tag
+      if: github.event_name == 'push'
+      env:
+        EXPECTED_TAG: v${{ steps.version.outputs.version }}-build${{ steps.version.outputs.build }}
+        ACTUAL_TAG: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+        if [ "$ACTUAL_TAG" != "$EXPECTED_TAG" ]; then
+          echo "::error::Tag $ACTUAL_TAG does not match project version $EXPECTED_TAG"
+          exit 1
+        fi
     
+    - name: Speech and MCP regression tests
+      run: |
+        bash scripts/test-speech.sh
+        bash scripts/test-mcp.sh
+
     - name: Archive and export (Developer ID)
       run: |
         set -euo pipefail
@@ -315,7 +331,11 @@ jobs:
         
         ### 🚀 What's New
         
-        macOS PDF Reader AI with automated release built from the latest main branch commit.
+        - Start an authenticated local MCP server from Settings → MCP Server to convert text to audio.
+        - Poll conversion progress, cancel jobs, and retrieve WAV/MP3 exports from connected MCP clients.
+        - Export document audio and prefetch speech chunks for smoother listening.
+        - Improved PDF text normalization and page tracking.
+        - Added a native iPhone/iPad development target sharing the reading and speech engines. iOS distribution is separate from this desktop update.
         
         ### 📦 Downloads
         
@@ -413,6 +433,13 @@ jobs:
 
         echo "=== Generated appcast.xml ==="
         cat "$RUNNER_TEMP/appcast.xml"
+
+        python3 scripts/validate-appcast.py \
+          "$RUNNER_TEMP/appcast.xml" \
+          --version "${{ steps.version.outputs.version }}" \
+          --build "${{ steps.version.outputs.build }}" \
+          --tag "${{ steps.version.outputs.tag }}" \
+          --repository "${{ github.repository }}"
 
         # Attach the appcast to the GitHub release too (handy for debugging).
         gh release upload "${{ steps.version.outputs.tag }}" "$RUNNER_TEMP/appcast.xml" --clobber

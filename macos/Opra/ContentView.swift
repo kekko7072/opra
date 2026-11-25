@@ -136,6 +136,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
             ttsProviderManager.stopSpeaking()
+            LocalMCPServer.shared.stop()
             try? modelContext.save()
         }
     }

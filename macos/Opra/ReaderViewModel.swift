@@ -76,7 +76,10 @@ final class ReaderViewModel: ObservableObject {
         let docID = doc.id
         isLoading = true
         Task.detached(priority: .userInitiated) {
-            let passages = PassageSegmenter.passages(for: pdf)
+            // Keep extraction isolated from the PDFDocument being rendered by
+            // PDFView. PDFKit objects are not safe to use concurrently.
+            let extractionPDF = PDFDocument(url: url)
+            let passages = extractionPDF.map(PassageSegmenter.passages(for:)) ?? []
             await MainActor.run {
                 guard self.loadGeneration == generation, self.document?.id == docID else { return }
                 self.allPassages = passages

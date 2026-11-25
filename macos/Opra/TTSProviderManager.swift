@@ -22,6 +22,9 @@ final class TTSProviderManager: ObservableObject {
             UserDefaults.standard.set(currentProvider.rawValue, forKey: Self.providerDefaultsKey)
         }
     }
+    @Published private(set) var isExporting = false
+    @Published private(set) var exportProgress: Double = 0
+    @Published private(set) var exportError: String?
 
     private static let providerDefaultsKey = "selectedTTSProvider"
 
@@ -68,6 +71,7 @@ final class TTSProviderManager: ObservableObject {
     var isSpeaking: Bool { current.isSpeaking }
     var isPaused: Bool { current.isPaused }
     var isProcessing: Bool { current.isProcessing }
+    var isPrefetching: Bool { current.isPrefetching }
     var errorMessage: String? { current.errorMessage }
     var readingProgress: Double { current.readingProgress }
     var currentWordIndex: Int { current.currentWordIndex }
@@ -86,6 +90,30 @@ final class TTSProviderManager: ObservableObject {
     func stopSpeaking() { current.stopSpeaking() }
     func setSpeechRate(_ rate: Float) { current.setSpeechRate(rate) }
     func previewSpeed(_ rate: Float) { current.previewSpeed(rate) }
+
+    var canExportAudio: Bool { current is any AudioExportingEngine }
+    var exportFileExtension: String { (current as? any AudioExportingEngine)?.exportFileExtension ?? "m4a" }
+    var exportFormatName: String { (current as? any AudioExportingEngine)?.exportFormatName ?? "Audio" }
+
+    func exportAudio(_ texts: [String], to url: URL) async {
+        guard !isExporting, let exporter = current as? any AudioExportingEngine else {
+            exportError = "The selected System voice cannot export audio. Choose Kokoro, Ollama, or OpenAI."
+            return
+        }
+        isExporting = true
+        exportProgress = 0
+        exportError = nil
+        defer { isExporting = false }
+        do {
+            try await exporter.exportAudio(texts, to: url) { [weak self] value in
+                self?.exportProgress = value
+            }
+        } catch is CancellationError {
+            exportError = nil
+        } catch {
+            exportError = error.localizedDescription
+        }
+    }
 
     func setSettingsManager(_ settings: SettingsManager) {
         engines.values.forEach { $0.setSettingsManager(settings) }

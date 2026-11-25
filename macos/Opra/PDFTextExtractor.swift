@@ -7,7 +7,14 @@
 
 import Foundation
 import PDFKit
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+import Combine
+private typealias NSFont = UIFont
+private typealias NSColor = UIColor
+#endif
 
 class PDFTextExtractor: ObservableObject {
     @Published var extractedText: String = ""
@@ -134,7 +141,8 @@ class PDFTextExtractor: ObservableObject {
                     print("Warning: Could not access page \(pageIndex + 1)")
                     continue
                 }
-                if let pageText = page.string {
+                let pageText = PDFTextNormalizer.text(from: page)
+                if !pageText.isEmpty {
                     print("Page \(pageIndex + 1): Extracted \(pageText.count) characters")
                     fullText += "--- Page \(pageIndex + 1) ---\n"
                     fullText += pageText + "\n\n"

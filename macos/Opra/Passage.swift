@@ -9,7 +9,7 @@
 
 import Foundation
 
-struct Passage: Identifiable, Equatable {
+struct Passage: Identifiable, Equatable, Sendable {
     /// Stable index into the document's full (pre-deletion) passage list.
     let id: Int
     let text: String

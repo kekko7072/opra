@@ -33,13 +33,13 @@ enum TTSProvider: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .system:
-            return "Uses macOS built-in text-to-speech voices"
+            return "Uses the device’s built-in text-to-speech voices"
         case .openAI:
             return "Uses OpenAI's latest speech model for higher-quality generated voices"
         case .ollama:
             return "Reads with Phonon through Ollama on this Mac (Apple Silicon; separate setup required)"
         case .kokoro:
-            return "Runs the open-source Kokoro neural voice fully on your Mac — no internet required"
+            return "Runs the open-source Kokoro neural voice fully on your device — no internet required"
         }
     }
 
@@ -66,6 +66,7 @@ protocol TTSEngine: AnyObject, ObservableObject {
     var isSpeaking: Bool { get }
     var isPaused: Bool { get }
     var isProcessing: Bool { get }
+    var isPrefetching: Bool { get }
     var errorMessage: String? { get }
     var readingProgress: Double { get }
     var currentWordIndex: Int { get }
@@ -129,4 +130,12 @@ protocol InstallableEngine: TTSEngine {
     var isReady: Bool { get }
     func ensureModelInstalled()
     func cancelInstall()
+}
+
+/// Optional capability for engines that can render a complete reading queue to disk.
+@MainActor
+protocol AudioExportingEngine: TTSEngine {
+    var exportFileExtension: String { get }
+    var exportFormatName: String { get }
+    func exportAudio(_ texts: [String], to url: URL, progress: @escaping @MainActor (Double) -> Void) async throws
 }

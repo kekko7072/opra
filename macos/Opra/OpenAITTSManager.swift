@@ -14,7 +14,7 @@ import AVFoundation
 import Combine
 
 @MainActor
-final class OpenAITTSManager: ObservableObject, TTSEngine {
+final class OpenAITTSManager: ObservableObject, TTSEngine, AudioExportingEngine {
     let provider: TTSProvider = .openAI
 
     @Published var isConfigured: Bool = false
@@ -45,6 +45,7 @@ final class OpenAITTSManager: ObservableObject, TTSEngine {
     var isSpeaking: Bool { controller.isSpeaking }
     var isPaused: Bool { controller.isPaused }
     var isProcessing: Bool { controller.isProcessing }
+    var isPrefetching: Bool { controller.isPrefetching }
     var errorMessage: String? { controller.errorMessage }
     var readingProgress: Double { controller.readingProgress }
     var currentWordIndex: Int { controller.currentWordIndex }
@@ -91,6 +92,32 @@ final class OpenAITTSManager: ObservableObject, TTSEngine {
     func previewSpeed(_ rate: Float) {
         controller.setRate(rate)
         speak("This is a preview of the selected OpenAI voice and reading speed.")
+    }
+
+    var exportFileExtension: String { "mp3" }
+    var exportFormatName: String { "MP3 Audio" }
+
+    func exportAudio(_ texts: [String], to url: URL, progress: @escaping @MainActor (Double) -> Void) async throws {
+        guard ensureConfigured() else { throw TTSProduceError(message: "OpenAI TTS is not configured.") }
+        applyDefaultInstructionsIfNeeded()
+        let chunks = texts.flatMap { splitTextForSpeech(preprocessTextForTTS($0)) }
+        guard !chunks.isEmpty else { throw TTSProduceError(message: "There is no text to export.") }
+
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        do {
+            for (index, chunk) in chunks.enumerated() {
+                try Task.checkCancellation()
+                let audio = try await requestSpeech(for: chunk.text)
+                try handle.write(contentsOf: audio)
+                progress(Double(index + 1) / Double(chunks.count))
+            }
+            try handle.close()
+        } catch {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
     }
 
     // MARK: - Configuration helpers

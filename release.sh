@@ -3,8 +3,8 @@
 # release.sh — cut a macOS release.
 #
 # Prompts for the new version (and build) number, bumps MARKETING_VERSION /
-# CURRENT_PROJECT_VERSION in the Xcode project, commits the bump, and pushes to `main`.
-# Pushing to `main` triggers the "Build and Release" GitHub Actions workflow, which
+# CURRENT_PROJECT_VERSION in the Xcode project, commits the bump, and pushes a release tag.
+# Pushing that tag triggers the "Build and Release" GitHub Actions workflow, which
 # builds, code-signs, notarizes, and publishes the .dmg / .app.zip as a GitHub Release
 # tagged v<version>-build<build>.
 #
@@ -53,7 +53,7 @@ fi
 tag="v${new_version}-build${new_build}"
 echo
 echo "About to release ${new_version} (build ${new_build})  →  tag ${tag}"
-echo "This commits the version bump and pushes to '${BRANCH}', triggering the release workflow."
+echo "This commits the version bump, pushes '${BRANCH}', and creates release tag '${tag}'."
 read -r -p "Continue? [y/N]: " confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
@@ -62,6 +62,13 @@ cur_branch="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$cur_branch" != "$BRANCH" ]; then
   read -r -p "You're on '${cur_branch}', not '${BRANCH}'. Push HEAD to '${BRANCH}' anyway? [y/N]: " ok
   [[ "$ok" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+fi
+
+if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+  echo "error: tag '$tag' already exists locally"; exit 1
+fi
+if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+  echo "error: tag '$tag' already exists on origin"; exit 1
 fi
 
 # --- apply version bump to every build config ---
@@ -75,8 +82,11 @@ echo "Bumped project to ${new_version} (build ${new_build})."
 # --- commit & push (only the version bump) ---
 git add "$PBXPROJ"
 git commit -m "Release ${new_version} (build ${new_build})"
-git push origin "HEAD:${BRANCH}"
+git tag -a "$tag" -m "Opra ${new_version} (build ${new_build})"
+# Publish the commit and its release tag together. Atomic push prevents main
+# advancing without a tag (or a tag pointing at a commit absent from main).
+git push --atomic origin "HEAD:${BRANCH}" "refs/tags/$tag"
 
 echo
-echo "✅ Pushed. The 'Build and Release' workflow will publish release ${tag}."
+echo "✅ Pushed ${tag}. The 'Build and Release' workflow will publish it."
 echo "   Track it at: https://github.com/kekko7072/Opra/actions"

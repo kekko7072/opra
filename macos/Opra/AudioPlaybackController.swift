@@ -26,6 +26,7 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
 
     // MARK: - Published playback state (mirrors the old OpenAITTSManager surface)
     @Published private(set) var isProcessing = false
+    @Published private(set) var isPrefetching = false
     @Published private(set) var isSpeaking = false
     @Published private(set) var isPaused = false
     @Published private(set) var errorMessage: String?
@@ -64,6 +65,13 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
     private var playbackStartDate: Date?
     private var activeRunID = UUID()
     private var produceTask: Task<Void, Never>?
+    private struct AudioKey: Hashable {
+        let documentChunk: Int
+        let speechChunk: Int
+    }
+    /// Contains only the single look-ahead request. Keeping this bounded avoids
+    /// retaining a document-sized set of audio buffers for local models.
+    private var audioTasks: [AudioKey: Task<Data, Error>] = [:]
 
     private var speechChunks: [SpeechChunk] = []
     private var currentSpeechChunkIndex = 0
@@ -103,18 +111,30 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
         guard isSpeaking, !isPaused else { return }
         audioPlayer?.pause()
         isPaused = true
+        suspendPrefetch()
     }
 
     func resume() {
         guard isSpeaking, isPaused else { return }
         audioPlayer?.play()
         isPaused = false
+        prefetchNextChunk(runID: activeRunID)
+    }
+
+    private func suspendPrefetch() {
+        guard let (key, task) = audioTasks.first else { return }
+        task.cancel()
+        audioTasks.removeValue(forKey: key)
+        isPrefetching = false
     }
 
     func stop() {
         activeRunID = UUID()
         produceTask?.cancel()
         produceTask = nil
+        audioTasks.values.forEach { $0.cancel() }
+        audioTasks.removeAll()
+        isPrefetching = false
         audioPlayer?.stop()
         audioPlayer = nil
         playbackTimer?.invalidate()
@@ -178,12 +198,14 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
         }
 
         let chunk = speechChunks[currentSpeechChunkIndex]
+        let key = AudioKey(documentChunk: currentDocumentChunk, speechChunk: currentSpeechChunkIndex)
         globalChunkIndex = completedChunkBase + currentSpeechChunkIndex
         isProcessing = true
 
         produceTask = Task { @MainActor in
             do {
-                let data = try await produceAudio(chunk)
+                let task = audioTasks.removeValue(forKey: key) ?? Task { try await produceAudio(chunk) }
+                let data = try await task.value
                 guard self.activeRunID == runID else { return }
                 self.playAudio(data, runID: runID)
             } catch is CancellationError {
@@ -213,11 +235,40 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
             isProcessing = false
             isSpeaking = true
             isPaused = false
+            prefetchNextChunk(runID: runID)
             playbackStartDate = playbackStartDate ?? Date()
             startPlaybackTracking()
             startElapsedTimeTracking()
         } catch {
             finishWithError("Could not play audio: \(error.localizedDescription)")
+        }
+    }
+
+    private func prefetchNextChunk(runID: UUID) {
+        guard activeRunID == runID, !isPaused, let produceAudio else { return }
+
+        let target: (AudioKey, SpeechChunk)?
+        if currentSpeechChunkIndex + 1 < speechChunks.count {
+            target = (
+                AudioKey(documentChunk: currentDocumentChunk, speechChunk: currentSpeechChunkIndex + 1),
+                speechChunks[currentSpeechChunkIndex + 1]
+            )
+        } else if isDocumentChunked, currentDocumentChunk + 1 < documentChunks.count,
+                  let first = split(documentChunks[currentDocumentChunk + 1]).first {
+            target = (AudioKey(documentChunk: currentDocumentChunk + 1, speechChunk: 0), first)
+        } else {
+            target = nil
+        }
+
+        guard let (key, chunk) = target, audioTasks[key] == nil else { return }
+        let task = Task<Data, Error> { try await produceAudio(chunk) }
+        audioTasks[key] = task
+        isPrefetching = true
+
+        Task { @MainActor [weak self] in
+            _ = await task.result
+            guard let self, self.activeRunID == runID else { return }
+            self.isPrefetching = false
         }
     }
 
@@ -243,6 +294,7 @@ final class AudioPlaybackController: NSObject, ObservableObject, AVAudioPlayerDe
         }
 
         isProcessing = false
+        isPrefetching = false
         isSpeaking = false
         isPaused = false
         readingProgress = 1.0
